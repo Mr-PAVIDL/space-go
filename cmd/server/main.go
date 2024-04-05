@@ -1,23 +1,13 @@
 package main
 
 import (
-	"context"
-	"fmt"
-	"space-go/internal/client"
+	"space-go/internal/server"
 )
 
 func main() {
-	baseURL := "https://datsedenspace.datsteam.dev"
-	token := "660c35366abee660c35366abf1"
-
-	ctx := context.Background()
-	apiClient := client.NewClient(baseURL, token)
-
-	player, err := apiClient.GetUniverse(ctx)
+	s := server.FromDump("dumps/planet_dump_2.json", "dumps/graph_dump_2.json")
+	err := server.Run(s)
 	if err != nil {
-		fmt.Printf("Error getting universe: %v\n", err)
-		return
+		panic(err)
 	}
-	fmt.Printf("Player: %v\n", player)
-
 }

@@ -11,7 +11,7 @@ type GameState struct {
 	Ship             Ship
 	Universe         Universe
 	CurrentPlanet    string
-	CollectedGarbage map[string][][]int // Keyed by garbage ID
+	CollectedGarbage map[string]Garbage // Keyed by garbage ID
 	AvailableRoutes  []Transition
 }
 
@@ -20,7 +20,7 @@ type Error struct {
 }
 
 type CollectRequest struct {
-	Garbage map[string][][]int `json:"garbage"`
+	Garbage map[string]Garbage `json:"garbage"`
 }
 
 type TravelRequest struct {
@@ -33,8 +33,13 @@ type PlanetDiff struct {
 	To   string `json:"to"`
 }
 
+// matrix or [(x,y)]
+// [(x,y)] != matrix
+type Cell = [2]int
+type Garbage []Cell
+
 type Planet struct {
-	Garbage map[string][][]int `json:"garbage"`
+	Garbage map[string]Garbage `json:"garbage"`
 	Name    string             `json:"name"`
 }
 
@@ -42,7 +47,7 @@ type Ship struct {
 	CapacityX int                `json:"capacityX"`
 	CapacityY int                `json:"capacityY"`
 	FuelUsed  int                `json:"fuelUsed"`
-	Garbage   map[string][][]int `json:"garbage"`
+	Garbage   map[string]Garbage `json:"garbage"`
 	Planet    Planet             `json:"planet"`
 }
 
@@ -89,6 +94,28 @@ func (u *Universe) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+func (u Universe) MarshalJSON() ([]byte, error) {
+	var raw [][]json.RawMessage
+	for _, transition := range u {
+		fromPlanet, err := json.Marshal(transition.FromPlanet)
+		if err != nil {
+			return nil, fmt.Errorf("marshalling fromPlanet: %w", err)
+		}
+		toPlanet, err := json.Marshal(transition.ToPlanet)
+		if err != nil {
+			return nil, fmt.Errorf("marshalling toPlanet: %w", err)
+		}
+		fuelCost, err := json.Marshal(transition.FuelCost)
+		if err != nil {
+			return nil, fmt.Errorf("marshalling fuelCost: %w", err)
+		}
+
+		raw = append(raw, []json.RawMessage{fromPlanet, toPlanet, fuelCost})
+	}
+
+	return json.Marshal(raw)
+}
+
 type Round struct {
 	StartAt     string `json:"startAt"`
 	EndAt       string `json:"endAt"`
@@ -109,12 +136,12 @@ type UniverseResponse struct {
 type TravelResponse struct {
 	FuelDiff      int                `json:"fuelDiff"`
 	PlanetDiffs   []PlanetDiff       `json:"planetDiffs"`
-	PlanetGarbage map[string][][]int `json:"planetGarbage"`
-	ShipGarbage   map[string][][]int `json:"shipGarbage"`
+	PlanetGarbage map[string]Garbage `json:"planetGarbage"`
+	ShipGarbage   map[string]Garbage `json:"shipGarbage"`
 }
 
 type CollectResponse struct {
-	Garbage map[string][][]int `json:"garbage"`
+	Garbage map[string]Garbage `json:"garbage"`
 	Leaved  []string           `json:"leaved"`
 }
 
