@@ -3,6 +3,7 @@ package simple
 import (
 	"context"
 	"space-go/internal/commander"
+	"time"
 )
 
 type Strategy struct {
@@ -10,26 +11,41 @@ type Strategy struct {
 }
 
 func New() *Strategy {
-	return &Strategy{}
+	return &Strategy{
+		visited: map[string]struct{}{},
+	}
 }
 
 func (strategy *Strategy) Next(ctx context.Context, state *commander.State) commander.Command {
-	strategy.visited[state.Planet] = struct{}{}
+	strategy.markVisited(state.Planet)
 
 	if state.Planet == EdenName {
 		// picking the planet to go to next
-		candidates := []string{}
+		var candidates []string
 
 		for planet := range state.Universe.Planets {
-			if strategy.isVisited(planet) {
+			if !strategy.isVisited(planet) {
 				candidates = append(candidates, planet)
 			}
 		}
 
-		nearest := state.Universe.Nearest()
-	} else {
+		if len(candidates) == 0 {
+			return commander.Idle(time.Second)
+		}
 
+		nearest := state.Universe.Nearest(state.Planet, candidates)
+
+		return commander.GoTo(nearest)
+	} else {
+		return commander.Sequential(
+			commander.Collect(),
+			commander.GoTo(EdenName),
+		)
 	}
+}
+
+func (strategy *Strategy) markVisited(planet string) {
+	strategy.visited[planet] = struct{}{}
 }
 
 func (strategy *Strategy) isVisited(planet string) bool {
@@ -37,4 +53,6 @@ func (strategy *Strategy) isVisited(planet string) bool {
 		return true
 	}
 
+	_, ok := strategy.visited[planet]
+	return ok
 }
