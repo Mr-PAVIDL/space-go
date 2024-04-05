@@ -66,7 +66,9 @@ func (c *DatsEdenSpaceClient) doRequest(ctx context.Context, req *http.Request, 
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("API request error: status code %d", resp.StatusCode)
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		bodyString := string(bodyBytes)
+		return fmt.Errorf("API request error: status code %d, response: %s", resp.StatusCode, bodyString)
 	}
 
 	if v != nil {
@@ -78,13 +80,13 @@ func (c *DatsEdenSpaceClient) doRequest(ctx context.Context, req *http.Request, 
 	return nil
 }
 
-func (c *DatsEdenSpaceClient) GetUniverse(ctx context.Context) (*model.Player, error) {
+func (c *DatsEdenSpaceClient) GetUniverse(ctx context.Context) (*model.UniverseResponse, error) {
 	req, err := c.createRequest("GET", "/player/universe", nil)
 	if err != nil {
 		return nil, err
 	}
 
-	var player model.Player
+	var player model.UniverseResponse
 	if err := c.doRequest(ctx, req, &player); err != nil {
 		return nil, err
 	}
@@ -120,13 +122,13 @@ func (c *DatsEdenSpaceClient) CollectGarbage(ctx context.Context, collectRequest
 	return &collectResponse, nil
 }
 
-func (c *DatsEdenSpaceClient) ResetGameState(ctx context.Context) (*model.AcceptedResponse, error) {
+func (c *DatsEdenSpaceClient) ResetGameState(ctx context.Context) (*model.ResetResponse, error) {
 	req, err := c.createRequest("DELETE", "/player/reset", nil)
 	if err != nil {
 		return nil, err
 	}
 
-	var acceptedResponse model.AcceptedResponse
+	var acceptedResponse model.ResetResponse
 	if err := c.doRequest(ctx, req, &acceptedResponse); err != nil {
 		return nil, err
 	}
@@ -134,13 +136,13 @@ func (c *DatsEdenSpaceClient) ResetGameState(ctx context.Context) (*model.Accept
 	return &acceptedResponse, nil
 }
 
-func (c *DatsEdenSpaceClient) GetRounds(ctx context.Context) (*model.RoundList, error) {
+func (c *DatsEdenSpaceClient) GetRounds(ctx context.Context) (*model.RoundsResponse, error) {
 	req, err := c.createRequest("GET", "/player/rounds", nil)
 	if err != nil {
 		return nil, err
 	}
 
-	var roundList model.RoundList
+	var roundList model.RoundsResponse
 	if err := c.doRequest(ctx, req, &roundList); err != nil {
 		return nil, err
 	}
