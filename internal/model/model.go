@@ -6,6 +6,15 @@ import (
 	"fmt"
 )
 
+type GameState struct {
+	PlayerName       string
+	Ship             Ship
+	Universe         Universe
+	CurrentPlanet    string
+	CollectedGarbage map[string][][]int // Keyed by garbage ID
+	AvailableRoutes  []Transition
+}
+
 type Error struct {
 	Error string `json:"error"`
 }
@@ -16,11 +25,6 @@ type CollectRequest struct {
 
 type TravelRequest struct {
 	Planets []string `json:"planets"`
-}
-
-type CollectResponse struct {
-	Garbage map[string][][]int `json:"garbage"`
-	Leaved  []string           `json:"leaved"`
 }
 
 type PlanetDiff struct {
@@ -85,15 +89,6 @@ func (u *Universe) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-type Player struct {
-	Name       string   `json:"name"`
-	RoundName  string   `json:"roundName"`
-	RoundEndIn int      `json:"roundEndIn"`
-	Ship       Ship     `json:"ship"`
-	Universe   Universe `json:"universe"`
-	Attempt    int      `json:"attempt"`
-}
-
 type Round struct {
 	StartAt     string `json:"startAt"`
 	EndAt       string `json:"endAt"`
@@ -102,8 +97,13 @@ type Round struct {
 	PlanetCount int    `json:"planetCount"`
 }
 
-type RoundList struct {
-	Rounds []Round `json:"rounds"`
+type UniverseResponse struct {
+	Name       string   `json:"name"`
+	RoundName  string   `json:"roundName"`
+	RoundEndIn int      `json:"roundEndIn"`
+	Ship       Ship     `json:"ship"`
+	Universe   Universe `json:"universe"`
+	Attempt    int      `json:"attempt"`
 }
 
 type TravelResponse struct {
@@ -113,6 +113,15 @@ type TravelResponse struct {
 	ShipGarbage   map[string][][]int `json:"shipGarbage"`
 }
 
-type AcceptedResponse struct {
+type CollectResponse struct {
+	Garbage map[string][][]int `json:"garbage"`
+	Leaved  []string           `json:"leaved"`
+}
+
+type ResetResponse struct {
 	Success bool `json:"success"`
+}
+
+type RoundsResponse struct {
+	Rounds []Round `json:"rounds"`
 }
