@@ -21,15 +21,29 @@ func Travel(planets ...string) TravelCommand {
 }
 
 func (cmd TravelCommand) Execute(ctx context.Context, commander *Commander) error {
+	if len(cmd.Path) == 0 {
+		// empty path means we stay?
+		return nil
+	}
+
 	response, err := commander.API.Travel(ctx, model.TravelRequest{
 		Planets: cmd.Path,
 	})
 
 	if err != nil {
-		return fmt.Errorf("failed to make a travel api call: %w", err)
+		return fmt.Errorf("failed to travel: %w", err)
 	}
 
-	// TODO: apply diffs tp the state
+	for _, diff := range response.PlanetDiffs {
+		commander.State.Universe.Graph[diff.From][diff.To] += diff.Fuel
+	}
+	commander.State.FuelUsed += response.FuelDiff
+	commander.State.Planet = model.Planet{
+		Garbage: response.PlanetGarbage,
+		Name:    cmd.Path[len(cmd.Path)-1],
+	}
+	commander.State.Universe.Planets[commander.State.Planet.Name] = commander.State.Planet
+	commander.State.Garbage = response.ShipGarbage
 
 	return nil
 }
@@ -60,13 +74,21 @@ type GotoCommand struct {
 }
 
 func GoTo(planet string) GotoCommand {
-	return GotoCommand{}
+	return GotoCommand{
+		Destination: planet,
+	}
 }
 
 func (cmd GotoCommand) Execute(ctx context.Context, commander *Commander) error {
-	// TODO: use collector from commander to optimally collect garbage
+	from := commander.State.Planet.Name
 
-	return nil
+	path := commander.State.Universe.ShortestPath(from, cmd.Destination)
+
+	if len(path) == 0 {
+		return fmt.Errorf("no path from %s to %s", from, cmd.Destination)
+	}
+
+	return Travel(path...).Execute(ctx, commander)
 }
 
 func (cmd GotoCommand) String() string {
@@ -78,7 +100,7 @@ type IdleCommand struct {
 }
 
 func Idle(duration time.Duration) IdleCommand {
-	return IdleCommand{}
+	return IdleCommand{duration}
 }
 
 func (cmd IdleCommand) Execute(ctx context.Context, commander *Commander) error {

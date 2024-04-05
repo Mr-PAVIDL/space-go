@@ -6,26 +6,22 @@ import (
 	"time"
 )
 
-type Strategy struct {
-	visited map[string]struct{}
-}
+type Strategy struct{}
 
 func New() *Strategy {
-	return &Strategy{
-		visited: map[string]struct{}{},
-	}
+	return &Strategy{}
 }
 
 func (strategy *Strategy) Next(ctx context.Context, state *commander.State) commander.Command {
-	strategy.markVisited(state.Planet)
-
-	if state.Planet == EdenName {
+	if state.Planet.Name == EdenName {
 		// picking the planet to go to next
 		var candidates []string
 
-		for planet := range state.Universe.Planets {
-			if !strategy.isVisited(planet) {
-				candidates = append(candidates, planet)
+		for _, planet := range state.Universe.Planets {
+			// if garbage is nil, the planet is expected to be in unknown state
+			// if garbage is an empty map, then the planet is emptied
+			if planet.Garbage == nil || len(planet.Garbage) > 0 {
+				candidates = append(candidates, planet.Name)
 			}
 		}
 
@@ -33,7 +29,7 @@ func (strategy *Strategy) Next(ctx context.Context, state *commander.State) comm
 			return commander.Idle(time.Second)
 		}
 
-		nearest := state.Universe.Nearest(state.Planet, candidates)
+		nearest := state.Universe.Nearest(state.Planet.Name, candidates)
 
 		return commander.GoTo(nearest)
 	} else {
@@ -42,17 +38,4 @@ func (strategy *Strategy) Next(ctx context.Context, state *commander.State) comm
 			commander.GoTo(EdenName),
 		)
 	}
-}
-
-func (strategy *Strategy) markVisited(planet string) {
-	strategy.visited[planet] = struct{}{}
-}
-
-func (strategy *Strategy) isVisited(planet string) bool {
-	if planet == EarthName {
-		return true
-	}
-
-	_, ok := strategy.visited[planet]
-	return ok
 }

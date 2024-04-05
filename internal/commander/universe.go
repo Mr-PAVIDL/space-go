@@ -48,6 +48,37 @@ type Universe struct {
 	Graph   map[string]map[string]int
 }
 
+func NewUniverse(transitions []model.Transition) *Universe {
+	universe := &Universe{
+		Planets: map[string]model.Planet{},
+		Graph:   map[string]map[string]int{},
+	}
+
+	for _, transition := range transitions {
+		universe.Planets[transition.ToPlanet] = model.Planet{
+			Garbage: map[string]model.Garbage{},
+			Name:    transition.ToPlanet,
+		}
+
+		universe.Planets[transition.FromPlanet] = model.Planet{
+			Garbage: map[string]model.Garbage{},
+			Name:    transition.FromPlanet,
+		}
+
+		if _, ok := universe.Graph[transition.FromPlanet]; !ok {
+			universe.Graph[transition.FromPlanet] = map[string]int{}
+		}
+
+		if _, ok := universe.Graph[transition.ToPlanet]; !ok {
+			universe.Graph[transition.ToPlanet] = map[string]int{}
+		}
+
+		universe.Graph[transition.FromPlanet][transition.ToPlanet] = transition.FuelCost
+	}
+
+	return universe
+}
+
 func (universe *Universe) Nearest(from string, to []string) string {
 	dist := make(map[string]int)
 	for planet := range universe.Planets {
@@ -86,4 +117,9 @@ func (universe *Universe) Nearest(from string, to []string) string {
 	}
 
 	return ""
+}
+
+func (universe *Universe) ShortestPath(from, to string) []string {
+	// TODO
+	return nil
 }
