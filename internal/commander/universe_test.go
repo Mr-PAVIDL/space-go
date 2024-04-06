@@ -1,0 +1,90 @@
+package commander
+
+import (
+	"space-go/internal/model"
+	"testing"
+)
+
+func TestUniverse_Nearest(t *testing.T) {
+	cases := []struct {
+		name           string
+		universe       Universe
+		from           string
+		to             []string
+		expectedPlanet string
+	}{
+		{
+			name: "Direct path to target",
+			universe: Universe{
+				Planets: map[string]model.Planet{
+					"Earth": {},
+					"Mars":  {},
+				},
+				Graph: map[string]map[string]int{
+					"Earth": {"Mars": 10},
+				},
+			},
+			from:           "Earth",
+			to:             []string{"Mars"},
+			expectedPlanet: "Mars",
+		},
+		{
+			name: "Multiple targets, choose nearest",
+			universe: Universe{
+				Planets: map[string]model.Planet{
+					"Earth": {},
+					"Mars":  {},
+					"Venus": {},
+				},
+				Graph: map[string]map[string]int{
+					"Earth": {"Mars": 10, "Venus": 5},
+				},
+			},
+			from:           "Earth",
+			to:             []string{"Mars", "Venus"},
+			expectedPlanet: "Venus",
+		},
+		{
+			name: "No path to target",
+			universe: Universe{
+				Planets: map[string]model.Planet{
+					"Earth": {},
+					"Mars":  {},
+				},
+				Graph: map[string]map[string]int{
+					"Earth": {},
+				},
+			},
+			from:           "Earth",
+			to:             []string{"Mars"},
+			expectedPlanet: "",
+		},
+		{
+			name: "Difficult",
+			universe: Universe{
+				Planets: map[string]model.Planet{
+					"Earth": {}, "Alpha": {}, "Beta": {}, "Gamma": {}, "Delta": {}, "Eden": {},
+				},
+				Graph: map[string]map[string]int{
+					"Earth": {"Alpha": 5, "Beta": 10},
+					"Alpha": {"Gamma": 15},
+					"Beta":  {"Gamma": 20, "Delta": 2},
+					"Gamma": {"Eden": 30},
+					"Delta": {"Eden": 25},
+				},
+			},
+			from:           "Earth",
+			to:             []string{"Gamma", "Eden"},
+			expectedPlanet: "Eden",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			nearest := tc.universe.Nearest(tc.from, tc.to)
+			if nearest != tc.expectedPlanet {
+				t.Errorf("Expected %s, got %s", tc.expectedPlanet, nearest)
+			}
+		})
+	}
+}
