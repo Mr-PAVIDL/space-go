@@ -38,6 +38,14 @@ func (p DumboPacker) Pack(width, height int, garbage map[string]model.Garbage) m
 	return added
 }
 
+func CalcTiles(garbage map[string]model.Garbage) int {
+	s := 0
+	for _, g := range garbage {
+		s += len(g)
+	}
+	return s
+}
+
 func print(added map[string]model.Garbage, width, height int) {
 	table := make([][]byte, height)
 	for i := 0; i < height; i++ {

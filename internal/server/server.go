@@ -9,6 +9,7 @@ import (
 	"os"
 	"sort"
 	"space-go/internal/model"
+	"time"
 )
 
 const PathCostIncrement = 10
@@ -122,10 +123,21 @@ func (s *Server) Travel(request model.TravelRequest) (model.TravelResponse, erro
 		s.totalDeposited += len(s.ship.Garbage)
 		s.ship.Garbage = map[string]model.Garbage{}
 		fmt.Println("welcome to eden, total deposited garbage:", s.totalDeposited)
+		if s.totalDeposited > len(s.allGarbage)-10 {
+			for name, planet := range s.planets {
+				if len(planet.Garbage) != 0 {
+					fmt.Println("planet", name, "still has ", len(planet.Garbage))
+				}
+			}
+		}
+
 		if s.totalDeposited == len(s.allGarbage) {
-			fmt.Println("<<<<<<<<<<<<<<<<<<<<<< FINISH >>>>>>>>>>>>>>>>>>>")
-			fmt.Println(" FUEL SPENT: ", s.totalFuel)
-			os.Exit(0)
+			go func() {
+				time.Sleep(5 * time.Second)
+				fmt.Println("<<<<<<<<<<<<<<<<<<<<<< FINISH >>>>>>>>>>>>>>>>>>>")
+				fmt.Println(" FUEL SPENT: ", s.totalFuel)
+				os.Exit(0)
+			}()
 		}
 	}
 
@@ -209,7 +221,6 @@ func (s *Server) Collect(request model.CollectRequest) (model.CollectResponse, e
 		})
 		for i := 0; i < len(normalized); i++ {
 			if expected[i] != normalized[i] {
-				fmt.Println(garbage.Normalize())
 				return model.CollectResponse{}, fmt.Errorf("garbage %s has incorrect form", name)
 			}
 		}

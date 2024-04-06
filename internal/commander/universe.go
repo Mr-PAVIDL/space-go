@@ -95,6 +95,22 @@ func (universe *Universe) Nearest(from string, to []string) string {
 	return nearest
 }
 
+func (universe *Universe) Farthest(from string, to []string) string {
+	dist, _ := universe.DijkstraWithPaths(from)
+
+	farthest := ""
+	maxFuelCost := -1
+
+	for _, target := range to {
+		if fuelCost, exists := dist[target]; exists && fuelCost > maxFuelCost {
+			farthest = target
+			maxFuelCost = fuelCost
+		}
+	}
+
+	return farthest
+}
+
 func (universe *Universe) DijkstraWithPaths(from string) (map[string]int, map[string]string) {
 	dist := make(map[string]int)
 	prev := make(map[string]string)

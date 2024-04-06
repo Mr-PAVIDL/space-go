@@ -24,7 +24,7 @@ func NewClient(baseURL, authToken string) *DatsEdenSpaceClient {
 		BaseURL:     baseURL,
 		AuthToken:   authToken,
 		HTTPClient:  &http.Client{Timeout: 1 * time.Second},
-		RateLimiter: rate.NewLimiter(rate.Every(time.Second/100), 1),
+		RateLimiter: rate.NewLimiter(rate.Every(time.Second/1000), 1),
 	}
 }
 

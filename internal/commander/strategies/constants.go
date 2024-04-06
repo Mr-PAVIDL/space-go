@@ -1,4 +1,4 @@
-package simple
+package strategies
 
 const (
 	EdenName  = "Eden"

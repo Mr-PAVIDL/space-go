@@ -5,11 +5,14 @@ import (
 	"space-go/internal/client"
 	"space-go/internal/commander"
 	"space-go/internal/commander/strategies/simple"
+	"time"
 )
 
 func main() {
 	baseURL := "http://localhost:3333"
 	token := "660c35366abee660c35366abf1"
+
+	time.Sleep(1 * time.Second)
 
 	ctx := context.Background()
 	apiClient := client.NewClient(baseURL, token)

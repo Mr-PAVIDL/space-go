@@ -2,8 +2,10 @@ package simple
 
 import (
 	"context"
+	"github.com/samber/lo"
+	"os"
 	"space-go/internal/commander"
-	"time"
+	"space-go/internal/commander/strategies"
 )
 
 type Strategy struct{}
@@ -13,7 +15,7 @@ func New() *Strategy {
 }
 
 func (strategy *Strategy) Next(ctx context.Context, state *commander.State) commander.Command {
-	if state.Planet.Name == EdenName {
+	if state.Planet.Name == strategies.EdenName || len(state.Garbage) == 0 {
 		// picking the planet to go to next
 		var candidates []string
 
@@ -25,18 +27,51 @@ func (strategy *Strategy) Next(ctx context.Context, state *commander.State) comm
 			}
 		}
 
-		//fmt.Println("candidates", candidates)
 		if len(candidates) == 0 {
-			return commander.Idle(time.Second)
+			os.Exit(0)
 		}
 
-		nearest := state.Universe.Nearest(state.Planet.Name, candidates)
+		//nearest := state.Universe.Farthest(state.Planet.Name, candidates)
 
-		return commander.GoTo(nearest)
-	} else {
 		return commander.Sequential(
+			commander.GoTo(lo.Sample(candidates)),
 			commander.Collect(),
-			commander.GoTo(EdenName),
+		)
+	} else {
+		//packer := commander.DumboPacker{}
+		//path := state.Universe.ShortestPath(state.Planet.Name, strategies.EdenName)
+		//for _, planet := range path[1 : len(path)-1] {
+		//	garbage := state.Universe.Planets[planet].Garbage
+		//	if garbage != nil && len(garbage) > 0 {
+		//		garbage := maps.Clone(garbage)
+		//		for name, val := range state.Garbage {
+		//			garbage[name] = val
+		//		}
+		//		for name, val := range garbage {
+		//			garbage[name] = val.Normalize()
+		//		}
+		//
+		//		packed := packer.Pack(state.CapacityX, state.CapacityY, garbage)
+		//		was, now := commander.CalcTiles(state.Garbage), commander.CalcTiles(packed)
+		//		wasPercent := 100 * was / state.CapacityX * state.CapacityY
+		//		nowPercent := 100 * now / state.CapacityX * state.CapacityY
+		//
+		//		// TODO: verify...
+		//		if now == state.CapacityX*state.CapacityY ||
+		//			nowPercent >= wasPercent+5 {
+		//			log.Println("OPTIMIZATION: ", "on route from ", state.Planet.Name, " to eden we can visit ",
+		//				planet)
+		//			return commander.Sequential(
+		//				commander.GoTo(planet),
+		//				commander.Collect(),
+		//			)
+		//		}
+		//
+		//	}
+		//}
+
+		return commander.Sequential(
+			commander.GoTo(strategies.EdenName),
 		)
 	}
 }

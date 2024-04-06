@@ -69,7 +69,7 @@ func (cmd CollectCommand) Execute(ctx context.Context, commander *Commander) err
 		garbage[name] = val.Normalize()
 	}
 	newGarbage := commander.Packer.Pack(commander.State.CapacityX, commander.State.CapacityY, garbage)
-	commander.State.Garbage = newGarbage
+	//commander.State.Garbage = newGarbage
 	if len(newGarbage) != 0 {
 		response, err := commander.API.CollectGarbage(ctx, model.CollectRequest{Garbage: newGarbage})
 		if err != nil {
@@ -80,6 +80,7 @@ func (cmd CollectCommand) Execute(ctx context.Context, commander *Commander) err
 			planetGarbage[id] = garbage[id]
 		}
 		commander.State.Planet.Garbage = planetGarbage
+		commander.State.Garbage = response.Garbage
 	}
 
 	return nil
