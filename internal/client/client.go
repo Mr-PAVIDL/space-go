@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"golang.org/x/time/rate"
 	"io"
+	"log"
 	"net/http"
 	"space-go/internal/model"
 	"time"
@@ -58,6 +59,7 @@ func (c *DatsEdenSpaceClient) doRequest(ctx context.Context, req *http.Request, 
 		return fmt.Errorf("rate limit error: %w", err)
 	}
 
+tryAgain:
 	req = req.WithContext(ctx)
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
@@ -66,9 +68,23 @@ func (c *DatsEdenSpaceClient) doRequest(ctx context.Context, req *http.Request, 
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		bodyBytes, _ := io.ReadAll(resp.Body)
-		bodyString := string(bodyBytes)
-		return fmt.Errorf("API request error: status code %d, response: %s", resp.StatusCode, bodyString)
+		if resp.StatusCode == http.StatusTooManyRequests {
+			log.Println("Rate limit exceeded, waiting for 2 seconds")
+			time.Sleep(2 * time.Second)
+			goto tryAgain
+		} else if resp.StatusCode == http.StatusBadGateway {
+			log.Println("Bad gateway, waiting for 2 seconds")
+			time.Sleep(2 * time.Second)
+			goto tryAgain
+		} else if resp.StatusCode == http.StatusBadRequest {
+			bodyBytes, _ := io.ReadAll(resp.Body)
+			bodyString := string(bodyBytes)
+			return fmt.Errorf("API request error: status code %d, response: %s", resp.StatusCode, bodyString)
+		} else {
+			log.Println("Hz what happened, waiting for 2 seconds")
+			time.Sleep(2 * time.Second)
+			goto tryAgain
+		}
 	}
 
 	if v != nil {
