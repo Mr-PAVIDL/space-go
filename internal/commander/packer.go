@@ -15,100 +15,50 @@ type Packer interface {
 
 type DumboPacker struct{}
 
-// Calculate the minimum and maximum x and y coordinates of garbage to determine its bounds.
-func calculateBounds(garbage model.Garbage) (minX, minY, maxX, maxY int) {
-	minX, minY = garbage[0][0], garbage[0][1]
-	maxX, maxY = minX, minY
-	for _, cell := range garbage {
-		if cell[0] < minX {
-			minX = cell[0]
-		}
-		if cell[0] > maxX {
-			maxX = cell[0]
-		}
-		if cell[1] < minY {
-			minY = cell[1]
-		}
-		if cell[1] > maxY {
-			maxY = cell[1]
-		}
-	}
-	return
-}
-
-//// Convert garbage to the Polyomino format expected by algorithmX.
-//func garbageToPolyomino(garbage model.Garbage) algorithmX.Polyomino {
-//	minX, minY, maxX, maxY := calculateBounds(garbage)
-//	width, height := maxX-minX+1, maxY-minY+1
-//	tiles := make([][]bool, height)
-//	for i := range tiles {
-//		tiles[i] = make([]bool, width)
-//	}
-//
-//	for _, cell := range garbage {
-//		x, y := cell[0]-minX, cell[1]-minY
-//		tiles[y][x] = true
-//	}
-//
-//	return algorithmX.Polyomino{Tiles: tiles}
-//}
-
-func garbageToPolyomino(g model.Garbage) algorithmX.Polyomino {
-	minX, minY, maxX, maxY := calculateBounds(g)
-	width, height := maxX-minX+1, maxY-minY+1
-	tiles := make([][]bool, height)
-	for i := range tiles {
-		tiles[i] = make([]bool, width)
-	}
-
-	for _, cell := range g {
-		x, y := cell[0]-minX, cell[1]-minY
-		tiles[y][x] = true
-	}
-
-	return algorithmX.Polyomino{Tiles: tiles, Name: ""} // Name will be assigned later.
+type pair struct {
+	Name string
+	G    model.Garbage
 }
 
 func (p DumboPacker) Pack(width, height int, garbage map[string]model.Garbage) map[string]model.Garbage {
-	var polys []algorithmX.Polyomino
-
-	// Convert each garbage piece into a named Polyomino.
-	for name, g := range garbage {
-		poly := garbageToPolyomino(g)
-		poly.Name = name // Assign the garbage piece's name to the Polyomino.
-		polys = append(polys, poly)
-	}
-
-	packedGarbage := algorithmX.SolvePacking(polys, width, height)
-
-	return packedGarbage
-}
-
-func (p DumboPacker) PackOld(width, height int, garbage map[string]model.Garbage) map[string]model.Garbage {
-	type Pair struct {
-		Name string
-		G    model.Garbage
-	}
-	pairs := lo.MapToSlice(garbage, func(key string, val model.Garbage) Pair {
-		return Pair{Name: key, G: val}
+	pairs := lo.MapToSlice(garbage, func(key string, val model.Garbage) pair {
+		return pair{Name: key, G: val}
 	})
 	sort.Slice(pairs, func(i, j int) bool {
 		return len(pairs[i].G) < len(pairs[j].G)
 	})
-	mat := model.EmptyMatrix(width, height)
-	added := map[string]model.Garbage{}
-	for _, p := range pairs {
-		if ok, g := tryFit(width, height, mat, p.G); ok {
-			added[p.Name] = g // save garbage with offset
+	best := pack(width, height, pairs)
+	for i := 0; i < 500; i++ {
+		lo.Shuffle(pairs)
+		result := pack(width, height, pairs)
+		if len(result) > len(best) {
+			log.Println("updated best: ", len(best), "->", len(result))
+			best = result
 		}
 	}
 	if len(garbage) > 0 {
-		//print(added, width, height)
+		print(best, width, height)
+	}
+	return best
+}
+
+func pack(width, height int, pairs []pair) map[string]model.Garbage {
+	mat := model.EmptyMatrix(width, height)
+	added := map[string]model.Garbage{}
+	cellCount := 0
+	for _, p := range pairs {
+		if width*height-cellCount < len(p.G) {
+			continue
+		}
+		if ok, g := tryFit(width, height, mat, p.G); ok {
+			added[p.Name] = g // save garbage with offset
+			cellCount += len(g)
+		}
 	}
 	return added
 }
 
-func CalcTiles(garbage map[string]model.Garbage) int {
+func CountTiles(garbage map[string]model.Garbage) int {
 	s := 0
 	for _, g := range garbage {
 		s += len(g)
@@ -172,4 +122,75 @@ func fits(mat model.Matrix, g model.Garbage, x int, y int) bool {
 		}
 	}
 	return true
+}
+
+type PackX struct{}
+
+// Calculate the minimum and maximum x and y coordinates of garbage to determine its bounds.
+func calculateBounds(garbage model.Garbage) (minX, minY, maxX, maxY int) {
+	minX, minY = garbage[0][0], garbage[0][1]
+	maxX, maxY = minX, minY
+	for _, cell := range garbage {
+		if cell[0] < minX {
+			minX = cell[0]
+		}
+		if cell[0] > maxX {
+			maxX = cell[0]
+		}
+		if cell[1] < minY {
+			minY = cell[1]
+		}
+		if cell[1] > maxY {
+			maxY = cell[1]
+		}
+	}
+	return
+}
+
+//// Convert garbage to the Polyomino format expected by algorithmX.
+//func garbageToPolyomino(garbage model.Garbage) algorithmX.Polyomino {
+//	minX, minY, maxX, maxY := calculateBounds(garbage)
+//	width, height := maxX-minX+1, maxY-minY+1
+//	tiles := make([][]bool, height)
+//	for i := range tiles {
+//		tiles[i] = make([]bool, width)
+//	}
+//
+//	for _, cell := range garbage {
+//		x, y := cell[0]-minX, cell[1]-minY
+//		tiles[y][x] = true
+//	}
+//
+//	return algorithmX.Polyomino{Tiles: tiles}
+//}
+
+func garbageToPolyomino(g model.Garbage) algorithmX.Polyomino {
+	minX, minY, maxX, maxY := calculateBounds(g)
+	width, height := maxX-minX+1, maxY-minY+1
+	tiles := make([][]bool, height)
+	for i := range tiles {
+		tiles[i] = make([]bool, width)
+	}
+
+	for _, cell := range g {
+		x, y := cell[0]-minX, cell[1]-minY
+		tiles[y][x] = true
+	}
+
+	return algorithmX.Polyomino{Tiles: tiles, Name: ""} // Name will be assigned later.
+}
+
+func (p PackX) Pack(width, height int, garbage map[string]model.Garbage) map[string]model.Garbage {
+	var polys []algorithmX.Polyomino
+
+	// Convert each garbage piece into a named Polyomino.
+	for name, g := range garbage {
+		poly := garbageToPolyomino(g)
+		poly.Name = name // Assign the garbage piece's name to the Polyomino.
+		polys = append(polys, poly)
+	}
+
+	packedGarbage := algorithmX.SolvePacking(polys[:10], width, height)
+
+	return packedGarbage
 }
