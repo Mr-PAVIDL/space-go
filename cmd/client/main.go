@@ -18,5 +18,6 @@ func main() {
 		fmt.Printf("Error getting universe: %v\n", err)
 		return
 	}
+
 	fmt.Printf("Player: %v\n", player)
 }
