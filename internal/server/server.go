@@ -19,7 +19,8 @@ type Server struct {
 	ship       model.Ship
 	allGarbage map[string]model.Garbage
 	//trunk     [][]string // keep in sync with ship.garbage!
-	totalFuel int
+	totalFuel      int
+	totalDeposited int
 }
 
 func FromDump(planetsPath, graphPath string) Server {
@@ -111,6 +112,17 @@ func (s *Server) Travel(request model.TravelRequest) (model.TravelResponse, erro
 			prevPlanet = planet
 		}
 	}
+	s.ship.Planet = s.planets[request.Planets[len(request.Planets)-1]]
+	for _, diff := range planetsDiffs {
+		s.graph[diff.From][diff.To] = diff.Fuel
+	}
+	s.totalFuel += totalCost
+
+	if s.ship.Planet.Name == "Eden" {
+		s.totalDeposited += len(s.ship.Garbage)
+		s.ship.Garbage = map[string]model.Garbage{}
+		fmt.Println("welcome to eden, total deposited garbage:", s.totalDeposited)
+	}
 
 	return model.TravelResponse{
 		FuelDiff:      totalCost,
@@ -123,7 +135,7 @@ func (s *Server) Travel(request model.TravelRequest) (model.TravelResponse, erro
 
 func checkOverlaps(newTrunk [][]int, garbage model.Garbage) bool {
 	for _, cell := range garbage {
-		if newTrunk[cell[0]][cell[1]] != 0 {
+		if newTrunk[cell[1]][cell[0]] != 0 {
 			return true
 		}
 	}
@@ -133,7 +145,7 @@ func checkOverlaps(newTrunk [][]int, garbage model.Garbage) bool {
 
 func checkOutOfBounds(garbage model.Garbage, x, y int) bool {
 	for _, cell := range garbage {
-		if cell[0] < 0 || cell[0] >= y || cell[1] < 0 || cell[1] >= x {
+		if cell[0] < 0 || cell[0] >= x || cell[1] < 0 || cell[1] >= y {
 			return true
 		}
 	}
@@ -169,27 +181,30 @@ func (s *Server) Collect(request model.CollectRequest) (model.CollectResponse, e
 			return model.CollectResponse{}, fmt.Errorf("garbage %s has incorrect form", name)
 		}
 
-		if checkOverlaps(newTrunk, garbage) {
-			return model.CollectResponse{}, fmt.Errorf("garbage %s overlaps with other garbage", name)
-		}
-
 		if checkOutOfBounds(garbage, s.ship.CapacityX, s.ship.CapacityY) {
 			return model.CollectResponse{}, fmt.Errorf("garbage %s is out of bounds", name)
 		}
 
-		for _, cell := range garbage {
-			newTrunk[cell[0]][cell[1]] = 1
+		if checkOverlaps(newTrunk, garbage) {
+			return model.CollectResponse{}, fmt.Errorf("garbage %s overlaps with other garbage", name)
 		}
 
+		for _, cell := range garbage {
+			newTrunk[cell[1]][cell[0]] = 1
+		}
+
+		expected = expected.Normalize()
+		normalized := garbage.Normalize()
 		// how to write fucking comparator?
 		sort.Slice(expected, func(i, j int) bool {
-			return expected[i][0] < expected[j][0] || (expected[i][1] == expected[j][1] && expected[i][1] < expected[j][1])
+			return expected[i][0] < expected[j][0] || (expected[i][0] == expected[j][0] && expected[i][1] < expected[j][1])
 		})
-		sort.Slice(garbage, func(i, j int) bool {
-			return garbage[i][0] < garbage[j][0] || (garbage[i][1] == garbage[j][1] && garbage[i][1] < garbage[j][1])
+		sort.Slice(normalized, func(i, j int) bool {
+			return normalized[i][0] < normalized[j][0] || (normalized[i][0] == normalized[j][0] && normalized[i][1] < normalized[j][1])
 		})
-		for i := 0; i < len(garbage); i++ {
-			if expected[i] != garbage[i] {
+		for i := 0; i < len(normalized); i++ {
+			if expected[i] != normalized[i] {
+				fmt.Println(garbage.Normalize())
 				return model.CollectResponse{}, fmt.Errorf("garbage %s has incorrect form", name)
 			}
 		}
