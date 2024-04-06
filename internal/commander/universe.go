@@ -80,9 +80,27 @@ func NewUniverse(transitions []model.Transition) *Universe {
 }
 
 func (universe *Universe) Nearest(from string, to []string) string {
+	dist, _ := universe.DijkstraWithPaths(from)
+
+	nearest := ""
+	minFuelCost := math.MaxInt32
+
+	for _, target := range to {
+		if fuelCost, exists := dist[target]; exists && fuelCost < minFuelCost {
+			nearest = target
+			minFuelCost = fuelCost
+		}
+	}
+
+	return nearest
+}
+
+func (universe *Universe) DijkstraWithPaths(from string) (map[string]int, map[string]string) {
 	dist := make(map[string]int)
+	prev := make(map[string]string)
 	for planet := range universe.Planets {
 		dist[planet] = math.MaxInt32
+		prev[planet] = ""
 	}
 	dist[from] = 0
 
@@ -94,32 +112,34 @@ func (universe *Universe) Nearest(from string, to []string) string {
 
 	for pq.Len() > 0 {
 		current := heap.Pop(&pq).(*Item)
-		if visited[current.name] {
-			continue
-		}
 		visited[current.name] = true
-
-		for _, target := range to {
-			if current.name == target {
-				return current.name
-			}
-		}
 
 		for neighbor, fuelCost := range universe.Graph[current.name] {
 			if !visited[neighbor] {
 				newFuel := current.fuel + fuelCost
 				if newFuel < dist[neighbor] {
 					dist[neighbor] = newFuel
+					prev[neighbor] = current.name
 					heap.Push(&pq, &Item{name: neighbor, fuel: newFuel})
 				}
 			}
 		}
 	}
 
-	return ""
+	return dist, prev
 }
 
 func (universe *Universe) ShortestPath(from, to string) []string {
-	// TODO
-	return nil
+	_, prev := universe.DijkstraWithPaths(from)
+	path := make([]string, 0)
+
+	for at := to; at != ""; at = prev[at] {
+		path = append([]string{at}, path...)
+	}
+
+	if len(path) == 0 || path[0] != from {
+		return nil
+	}
+
+	return path
 }

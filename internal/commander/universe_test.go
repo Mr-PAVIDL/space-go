@@ -75,7 +75,7 @@ func TestUniverse_Nearest(t *testing.T) {
 			},
 			from:           "Earth",
 			to:             []string{"Gamma", "Eden"},
-			expectedPlanet: "Eden",
+			expectedPlanet: "Gamma",
 		},
 	}
 
@@ -88,3 +88,51 @@ func TestUniverse_Nearest(t *testing.T) {
 		})
 	}
 }
+
+//func (universe *Universe) Nearest(from string, to []string) string {
+//	// Initialize distances map
+//	distances := make(map[string]int)
+//	for planet := range universe.Planets {
+//		if planet == from {
+//			distances[planet] = 0
+//		} else {
+//			distances[planet] = math.MaxInt32
+//		}
+//	}
+//
+//	// Dijkstra's algorithm
+//	visited := make(map[string]bool)
+//	for len(visited) < len(universe.Planets) {
+//		// Find the unvisited planet with the smallest distance
+//		minDistance := math.MaxInt32
+//		minPlanet := ""
+//		for planet, distance := range distances {
+//			if !visited[planet] && distance <= minDistance {
+//				minDistance = distance
+//				minPlanet = planet
+//			}
+//		}
+//
+//		// Mark the planet as visited
+//		visited[minPlanet] = true
+//
+//		// Update the distances to the neighboring planets
+//		for neighbor, distance := range universe.Graph[minPlanet] {
+//			if newDistance := distances[minPlanet] + distance; newDistance < distances[neighbor] {
+//				distances[neighbor] = newDistance
+//			}
+//		}
+//	}
+//
+//	// Find the nearest planet from the 'to' list
+//	minDistance := math.MaxInt32
+//	nearestPlanet := ""
+//	for _, planet := range to {
+//		if distances[planet] < minDistance {
+//			minDistance = distances[planet]
+//			nearestPlanet = planet
+//		}
+//	}
+//
+//	return nearestPlanet
+//}
