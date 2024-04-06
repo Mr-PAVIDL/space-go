@@ -49,6 +49,12 @@ func (s *httpServer) postTravel(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resp, err := s.Travel(req)
+	if err != nil {
+		fmt.Printf("failed to serve post travel: %s", err)
+		io.WriteString(w, err.Error())
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
 
 	data, err := json.Marshal(resp)
 	if err != nil {
@@ -86,6 +92,12 @@ func (s *httpServer) postCollect(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resp, err := s.Collect(req)
+	if err != nil {
+		fmt.Printf("failed to serve post collect: %s", err)
+		io.WriteString(w, err.Error())
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
 
 	data, err := json.Marshal(resp)
 	if err != nil {
