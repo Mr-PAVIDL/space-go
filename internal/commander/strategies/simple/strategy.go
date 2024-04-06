@@ -32,6 +32,8 @@ func MakeBigGarbage(size int) map[string]model.Garbage {
 
 const ScoutUntilUncoveredFraction = 1.0
 
+var confirmOverdrive = false
+
 func (strategy *Strategy) Next(ctx context.Context, state *commander.State) commander.Command {
 	//uncoveredCount := 0
 	//for _, planet := range state.Universe.Planets {
@@ -68,6 +70,11 @@ func (strategy *Strategy) Next(ctx context.Context, state *commander.State) comm
 		if len(candidates) == 0 {
 			fmt.Println("No nearest planet found, peeking at random")
 			time.Sleep(time.Second / 2)
+			if !confirmOverdrive {
+				fmt.Scanln("Confirm to continue polling")
+				confirmOverdrive = true
+			}
+
 			nearest = lo.Sample(lo.MapToSlice(state.Universe.Planets, func(n string, _ model.Planet) string {
 				return n
 			}))
