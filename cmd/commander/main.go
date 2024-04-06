@@ -9,8 +9,8 @@ import (
 )
 
 func main() {
-	//baseURL := "http://localhost:3333"
-	baseURL := "https://datsedenspace.datsteam.dev"
+	baseURL := "http://localhost:3333"
+	//baseURL := "https://datsedenspace.datsteam.dev"
 	token := "660c35366abee660c35366abf1"
 
 	time.Sleep(3 * time.Second)

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"maps"
+	"math"
 	"space-go/internal/model"
 	"strings"
 	"time"
@@ -59,6 +60,11 @@ func (cmd TravelCommand) String() string {
 
 type CollectCommand struct {
 	proposal map[string]model.Garbage
+	scouting bool
+}
+
+func CollectScouting() CollectCommand {
+	return CollectCommand{proposal: nil, scouting: true}
 }
 
 func CollectWithProposal(proposal map[string]model.Garbage) CollectCommand {
@@ -81,15 +87,22 @@ func (cmd CollectCommand) Execute(ctx context.Context, commander *Commander) err
 	for name, val := range garbage {
 		garbage[name] = val.Normalize()
 	}
-	newGarbage := commander.Packer.Pack(commander.State.CapacityX, commander.State.CapacityY, garbage)
-	if len(cmd.proposal) > len(newGarbage) {
+	minTiles := 0
+	if len(commander.State.Garbage) == 0 {
+		minTiles = int(math.Ceil(float64(commander.State.CapacityY*commander.State.CapacityX) * 0.30))
+	} else {
+		minTiles = int(math.Ceil(float64(commander.State.CapacityY*commander.State.CapacityX)*0.05)) + len(commander.State.Garbage)
+	}
+
+	newGarbage := commander.Packer.Pack(commander.State.CapacityX, commander.State.CapacityY, garbage, cmd.scouting, minTiles)
+	if CountTiles(cmd.proposal) > CountTiles(newGarbage) {
 		newGarbage = cmd.proposal
 	}
 
 	if len(commander.State.Garbage) > len(newGarbage) {
 		log.Println("didn't improve: ", len(commander.State.Garbage),
 			"->", len(newGarbage), commander.State.Garbage, newGarbage)
-		return nil
+		//return nil
 	}
 	//commander.State.Garbage = newGarbage
 	if len(newGarbage) != 0 {

@@ -10,7 +10,7 @@ import (
 )
 
 type Packer interface {
-	Pack(width, height int, garbage map[string]model.Garbage) map[string]model.Garbage
+	Pack(width, height int, garbage map[string]model.Garbage, scouting bool, minIncrease int) map[string]model.Garbage
 }
 
 type DumboPacker struct{}
@@ -20,17 +20,17 @@ type pair struct {
 	G    model.Garbage
 }
 
-func (p DumboPacker) Pack(width, height int, garbage map[string]model.Garbage) map[string]model.Garbage {
+func (p DumboPacker) Pack(width, height int, garbage map[string]model.Garbage, scouting bool, minTiles int) map[string]model.Garbage {
 	pairs := lo.MapToSlice(garbage, func(key string, val model.Garbage) pair {
 		return pair{Name: key, G: val}
 	})
 	sort.Slice(pairs, func(i, j int) bool {
 		return len(pairs[i].G) < len(pairs[j].G)
 	})
-	best := pack(width, height, pairs)
+	best := pack(width, height, pairs, scouting, minTiles)
 	for i := 0; i < 500; i++ {
 		lo.Shuffle(pairs)
-		result := pack(width, height, pairs)
+		result := pack(width, height, pairs, scouting, minTiles)
 		if len(result) > len(best) {
 			log.Println("updated best: ", len(best), "->", len(result))
 			best = result
@@ -42,7 +42,7 @@ func (p DumboPacker) Pack(width, height int, garbage map[string]model.Garbage) m
 	return best
 }
 
-func pack(width, height int, pairs []pair) map[string]model.Garbage {
+func pack(width, height int, pairs []pair, scouting bool, minTiles int) map[string]model.Garbage {
 	mat := model.EmptyMatrix(width, height)
 	added := map[string]model.Garbage{}
 	cellCount := 0
@@ -53,6 +53,9 @@ func pack(width, height int, pairs []pair) map[string]model.Garbage {
 		if ok, g := tryFit(width, height, mat, p.G); ok {
 			added[p.Name] = g // save garbage with offset
 			cellCount += len(g)
+		}
+		if cellCount >= minTiles && scouting {
+			return added
 		}
 	}
 	return added
@@ -180,7 +183,7 @@ func garbageToPolyomino(g model.Garbage) algorithmX.Polyomino {
 	return algorithmX.Polyomino{Tiles: tiles, Name: ""} // Name will be assigned later.
 }
 
-func (p PackX) Pack(width, height int, garbage map[string]model.Garbage) map[string]model.Garbage {
+func (p PackX) Pack(width, height int, garbage map[string]model.Garbage, scouting bool) map[string]model.Garbage {
 	var polys []algorithmX.Polyomino
 
 	// Convert each garbage piece into a named Polyomino.

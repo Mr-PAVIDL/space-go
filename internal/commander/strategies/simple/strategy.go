@@ -28,7 +28,21 @@ func MakeBigGarbage(size int) map[string]model.Garbage {
 	return map[string]model.Garbage{"big_garbage": g}
 }
 
+const ScoutUntilUncoveredFraction = 0.9
+
 func (strategy *Strategy) Next(ctx context.Context, state *commander.State) commander.Command {
+	uncoveredCount := 0
+	for _, planet := range state.Universe.Planets {
+		if planet.Garbage == nil {
+			uncoveredCount++
+		}
+	}
+	if float64(uncoveredCount) < float64(len(state.Universe.Planets))*ScoutUntilUncoveredFraction {
+		if scout := strategy.scout(state); scout != nil {
+			return scout
+		}
+	}
+
 	if state.Planet.Name == strategies.EdenName || len(state.Garbage) == 0 {
 		// picking the planet to go to next
 		var candidates []string
@@ -39,7 +53,7 @@ func (strategy *Strategy) Next(ctx context.Context, state *commander.State) comm
 			// if garbage is an empty map, then the planet is emptied
 			if planet.Garbage == nil || len(planet.Garbage) > 0 {
 				if planet.Garbage != nil && commander.CountTiles(planet.Garbage) < minTiles {
-					continue
+					//continue
 				}
 				candidates = append(candidates, planet.Name)
 			}
@@ -57,26 +71,9 @@ func (strategy *Strategy) Next(ctx context.Context, state *commander.State) comm
 		)
 	} else {
 		packer := commander.DumboPacker{}
-		myGarbage := maps.Clone(state.Garbage)
-		haveALotOfSpace := packer.Pack(state.CapacityX, state.CapacityY, model.PileGarbage(myGarbage, MakeBigGarbage(4)))
-		if len(haveALotOfSpace) > len(myGarbage) {
-			// find uncovered planet because we are guaranteed to find something fitting there
-			var candidates []string
-
-			for _, planet := range state.Universe.Planets {
-				if planet.Garbage == nil {
-					candidates = append(candidates, planet.Name)
-				}
-			}
-			if len(candidates) != 0 {
-				log.Println("OPTIMIZATION: have a lot of empty space, will uncover nearest planet")
-				nearest := state.Universe.Nearest(state.Planet.Name, candidates)
-				return commander.Sequential(
-					commander.GoTo(nearest),
-					commander.Collect(),
-				)
-			} else {
-				candidates = []string{}
+		if strategy.hasGuaranteedSpace(state) {
+			{
+				candidates := []string{}
 				for _, planet := range state.Universe.Planets {
 					if planet.Garbage != nil && len(planet.Garbage) > 0 {
 						candidates = append(candidates, planet.Name)
@@ -105,18 +102,19 @@ func (strategy *Strategy) Next(ctx context.Context, state *commander.State) comm
 					garbage[name] = val.Normalize()
 				}
 
-				packed := packer.Pack(state.CapacityX, state.CapacityY, garbage)
+				packed := packer.Pack(state.CapacityX, state.CapacityY, garbage, false, 0)
 				was, now := commander.CountTiles(state.Garbage), commander.CountTiles(packed)
 				minimalCells := int(math.Ceil(float64(state.CapacityY*state.CapacityX) * 0.05))
 
 				// TODO: verify...
 				if now == state.CapacityX*state.CapacityY ||
+					len(garbage) == len(packed) ||
 					now >= minimalCells+was {
 					log.Println("OPTIMIZATION: ", "on route from ", state.Planet.Name, " to eden we can visit ",
 						planet)
 					return commander.Sequential(
 						commander.GoTo(planet),
-						commander.Collect(),
+						commander.CollectWithProposal(packed),
 					)
 				}
 
@@ -127,4 +125,34 @@ func (strategy *Strategy) Next(ctx context.Context, state *commander.State) comm
 			commander.GoTo(strategies.EdenName),
 		)
 	}
+}
+
+func (strategy *Strategy) hasGuaranteedSpace(state *commander.State) bool {
+	packer := commander.DumboPacker{}
+	myGarbage := maps.Clone(state.Garbage)
+	haveALotOfSpace := packer.Pack(state.CapacityX, state.CapacityY, model.PileGarbage(myGarbage, MakeBigGarbage(4)), false, 0)
+	return len(haveALotOfSpace) > len(myGarbage)
+}
+
+func (strategy *Strategy) scout(state *commander.State) commander.Command {
+	if !strategy.hasGuaranteedSpace(state) {
+		return nil
+	}
+
+	// find not-uncovered planet because we are guaranteed to find something fitting there
+	var candidates []string
+	for _, planet := range state.Universe.Planets {
+		if planet.Garbage == nil {
+			candidates = append(candidates, planet.Name)
+		}
+	}
+	if len(candidates) != 0 {
+		log.Println("OPTIMIZATION: have a lot of empty space, will scout")
+		nearest := state.Universe.Nearest(state.Planet.Name, candidates)
+		return commander.Sequential(
+			commander.GoTo(nearest),
+			commander.CollectScouting(),
+		)
+	}
+	return nil
 }
