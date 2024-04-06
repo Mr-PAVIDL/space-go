@@ -38,6 +38,27 @@ type PlanetDiff struct {
 type Cell = [2]int
 type Garbage []Cell
 
+// Adding a Bounds method to Garbage type for convenience
+func (g Garbage) Bounds() (minX, maxX, minY, maxY int) {
+	minX, minY = g[0][0], g[0][1]
+	maxX, maxY = minX, minY
+	for _, cell := range g {
+		if cell[0] < minX {
+			minX = cell[0]
+		}
+		if cell[0] > maxX {
+			maxX = cell[0]
+		}
+		if cell[1] < minY {
+			minY = cell[1]
+		}
+		if cell[1] > maxY {
+			maxY = cell[1]
+		}
+	}
+	return
+}
+
 type Planet struct {
 	Garbage map[string]Garbage `json:"garbage"`
 	Name    string             `json:"name"`

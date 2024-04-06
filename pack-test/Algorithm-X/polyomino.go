@@ -118,36 +118,108 @@ func printPacking(rows [][]bool, w int, h int) {
 //	return m
 //}
 
-// This function assumes that you have a way to map from the solution's placement back to your polyomino identifiers.
+//// This function assumes that you have a way to map from the solution's placement back to your polyomino identifiers.
+//func processPackingResults(rows [][]bool, w int, h int, polys []Polyomino) map[string]model.Garbage {
+//	// Initialize an empty map to store the final positions of each piece of garbage
+//	result := make(map[string]model.Garbage)
+//
+//	// Assuming each row in the solution corresponds to a placement of a polyomino piece,
+//	// and 'id' can be derived or mapped from the polyominoes provided to SolvePacking.
+//	for _, poly := range polys {
+//		// Example conversion, adapt based on your ID system.
+//		var placements model.Garbage
+//		for i := range rows {
+//			if rows[i][w*h+poly.id-1] { // Check if this row corresponds to the polyomino being placed.
+//				for x := 0; x < w; x++ {
+//					for y := 0; y < h; y++ {
+//						if rows[i][y*w+x] {
+//							// Translate the matrix position back to your Cell format
+//							placements = append(placements, model.Cell{x, y})
+//						}
+//					}
+//				}
+//				break // Assuming each polyomino is placed exactly once, break after finding its placement.
+//			}
+//		}
+//		result[poly.Name] = placements
+//	}
+//
+//	return result
+//}
+
+func garbageToPolyominoes(garbage map[string]model.Garbage) []Polyomino {
+	var polys []Polyomino
+	for name, cells := range garbage {
+		// Convert each piece of garbage into a Polyomino
+		poly := convertCellsToPolyomino(cells)
+		poly.Name = name
+		polys = append(polys, poly)
+	}
+	return polys
+}
+
+func convertCellsToPolyomino(cells model.Garbage) Polyomino {
+	minX, maxX, minY, maxY := cells.Bounds()
+	width := maxX - minX + 1
+	height := maxY - minY + 1
+
+	tiles := make([][]bool, height)
+	for i := range tiles {
+		tiles[i] = make([]bool, width)
+	}
+
+	for _, cell := range cells {
+		x, y := cell[0]-minX, cell[1]-minY
+		tiles[y][x] = true
+	}
+
+	return Polyomino{Tiles: tiles}
+}
+
 func processPackingResults(rows [][]bool, w int, h int, polys []Polyomino) map[string]model.Garbage {
-	// Initialize an empty map to store the final positions of each piece of garbage
+	// The result map to hold the final placements for each piece of garbage
 	result := make(map[string]model.Garbage)
 
-	// Assuming each row in the solution corresponds to a placement of a polyomino piece,
-	// and 'id' can be derived or mapped from the polyominoes provided to SolvePacking.
-	for _, poly := range polys {
-		// Example conversion, adapt based on your ID system.
-		var placements model.Garbage
-		for i := range rows {
-			if rows[i][w*h+poly.id-1] { // Check if this row corresponds to the polyomino being placed.
-				for x := 0; x < w; x++ {
-					for y := 0; y < h; y++ {
-						if rows[i][y*w+x] {
-							// Translate the matrix position back to your Cell format
-							placements = append(placements, model.Cell{x, y})
-						}
-					}
-				}
-				break // Assuming each polyomino is placed exactly once, break after finding its placement.
+	// Board size and polyomino count will help us determine the correct column index for each polyomino
+	polyCount := len(polys)
+	boardSize := w * h
+
+	// Iterate over each row in the solution
+	for _, row := range rows {
+		// Determine which polyomino this row corresponds to
+		var polyID int
+		for i := boardSize; i < boardSize+polyCount; i++ {
+			if row[i] {
+				polyID = i - boardSize + 1
+				break
 			}
 		}
-		result[poly.Name] = placements
+
+		// Find the polyomino by ID (assuming IDs were assigned sequentially in the order polys were given)
+		poly := polys[polyID-1]
+
+		// Translate the solution row back to model.Garbage format
+		var placement model.Garbage
+		for i := 0; i < boardSize; i++ {
+			if row[i] {
+				x := i % w
+				y := i / w
+				placement = append(placement, model.Cell{x, y})
+			}
+		}
+
+		// Add this placement to the result, keyed by the polyomino's name
+		result[poly.Name] = placement
 	}
 
 	return result
 }
 
-func SolvePacking(polys []Polyomino, w int, h int) map[string]model.Garbage {
+func SolvePacking(garbage map[string]model.Garbage, w int, h int) map[string]model.Garbage {
+	polys := garbageToPolyominoes(garbage)
+	for _, pol := range polys {
+		fmt.Println(pol.Name, pol.Tiles)
+	}
 	m := packingMatrix(polys, w, h)
 	start := time.Now()
 	solutionRows := FindRows(m)
@@ -157,7 +229,23 @@ func SolvePacking(polys []Polyomino, w int, h int) map[string]model.Garbage {
 	finalPlacements := processPackingResults(solutionRows, w, h, polys)
 
 	fmt.Printf("Time: %s\n", elapsed)
+
+	printPacking(solutionRows, w, h)
 	return finalPlacements
+	//return nil
+}
+
+// SolvePacking solves the packing problem and displays the search time.
+func SolvePackingOld(polys []Polyomino, w int, h int) {
+	m := packingMatrix(polys, w, h)
+
+	start := time.Now()
+	rows := FindRows(m)
+	elapsed := time.Since(start)
+
+	printPacking(rows, w, h)
+
+	fmt.Printf("Time: %s\n", elapsed)
 }
 
 // uniqRotations returns the up to 8 possibilities from rotation and flipping filtered for uniqueness

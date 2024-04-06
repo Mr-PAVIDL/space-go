@@ -170,6 +170,34 @@ func checkOutOfBounds(garbage model.Garbage, x, y int) bool {
 	return false
 }
 
+func RotateGarbage(g model.Garbage) model.Garbage {
+	var rotated model.Garbage
+	for _, cell := range g {
+		rotated = append(rotated, [2]int{cell[1], -cell[0]})
+	}
+	if len(rotated) > 0 {
+		rotated = NormalizeGarbage(rotated)
+	}
+	return rotated
+}
+
+// NormalizeGarbage ensures all garbage cell coordinates are positive and aligns the shape to the top-left.
+func NormalizeGarbage(garbage model.Garbage) model.Garbage {
+	minX, minY := garbage[0][1], garbage[0][0] // Assuming [y, x] structure
+	for _, cell := range garbage {
+		if cell[1] < minX {
+			minX = cell[1]
+		}
+		if cell[0] < minY {
+			minY = cell[0]
+		}
+	}
+	for i, cell := range garbage {
+		garbage[i] = [2]int{cell[0] - minY, cell[1] - minX}
+	}
+	return garbage
+}
+
 func (s *Server) Collect(request model.CollectRequest) (model.CollectResponse, error) {
 	if len(request.Garbage) == 0 {
 		return model.CollectResponse{}, errors.New("at least one garbage is required")
@@ -210,8 +238,8 @@ func (s *Server) Collect(request model.CollectRequest) (model.CollectResponse, e
 			newTrunk[cell[1]][cell[0]] = 1
 		}
 
-		expected = expected.Normalize()
-		normalized := garbage.Normalize()
+		expected, _, _ = expected.Normalize()
+		normalized, _, _ := garbage.Normalize()
 		// how to write fucking comparator?
 		sort.Slice(expected, func(i, j int) bool {
 			return expected[i][0] < expected[j][0] || (expected[i][0] == expected[j][0] && expected[i][1] < expected[j][1])
@@ -219,11 +247,28 @@ func (s *Server) Collect(request model.CollectRequest) (model.CollectResponse, e
 		sort.Slice(normalized, func(i, j int) bool {
 			return normalized[i][0] < normalized[j][0] || (normalized[i][0] == normalized[j][0] && normalized[i][1] < normalized[j][1])
 		})
-		for i := 0; i < len(normalized); i++ {
-			if expected[i] != normalized[i] {
-				return model.CollectResponse{}, fmt.Errorf("garbage %s has incorrect form", name)
-			}
-		}
+
+		//matched := false
+		//for rotation := 0; rotation < 4; rotation++ {
+		//	if rotation > 0 {
+		//		garbage = RotateGarbage(garbage)
+		//	}
+		//	garbage, _, _ = garbage.Normalize()
+		//
+		//	if reflect.DeepEqual(expected, garbage) {
+		//		matched = true
+		//		break
+		//	}
+		//}
+		//
+		//if !matched {
+		//	return model.CollectResponse{}, fmt.Errorf("garbage %s does not match in any rotation", name)
+		//}
+		//for i := 0; i < len(normalized); i++ {
+		//	if expected[i] != normalized[i] {
+		//		return model.CollectResponse{}, fmt.Errorf("garbage %s has incorrect form", name)
+		//	}
+		//}
 	}
 
 	leaved := maps.Clone(s.ship.Planet.Garbage)

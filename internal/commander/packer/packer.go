@@ -6,12 +6,14 @@ import (
 	"space-go/internal/model"
 )
 
-func Pack(piecesOfGarbage map[string]model.Garbage, w, h int) (model.Matrix, map[string]model.Garbage) {
-	polyominos := make([]*polyomino, 0, len(piecesOfGarbage))
+type DuploPacker struct{}
+
+func (d DuploPacker) Pack(w, h int, pGarbage map[string]model.Garbage) map[string]model.Garbage {
+	polyominos := make([]*polyomino, 0, len(pGarbage))
 	pid2polyomino := map[int]*polyomino{}
 
 	pid := 1
-	for gid, garbage := range piecesOfGarbage {
+	for gid, garbage := range pGarbage {
 		g, gw, gh := garbage.Normalize()
 		mat := model.EmptyMatrix(gw, gh)
 		for _, cell := range g {
@@ -132,7 +134,7 @@ func Pack(piecesOfGarbage map[string]model.Garbage, w, h int) (model.Matrix, map
 		return true
 	})
 
-	return grid, newGarbage
+	return newGarbage
 }
 
 type polyomino struct {

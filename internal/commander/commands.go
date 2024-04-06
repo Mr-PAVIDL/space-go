@@ -85,7 +85,7 @@ func (cmd CollectCommand) Execute(ctx context.Context, commander *Commander) err
 		garbage[name] = val
 	}
 	for name, val := range garbage {
-		garbage[name] = val.Normalize()
+		garbage[name], _, _ = val.Normalize()
 	}
 	minTiles := 0
 	if len(commander.State.Garbage) == 0 {

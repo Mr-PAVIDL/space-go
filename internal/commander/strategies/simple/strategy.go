@@ -28,7 +28,7 @@ func MakeBigGarbage(size int) map[string]model.Garbage {
 	return map[string]model.Garbage{"big_garbage": g}
 }
 
-const ScoutUntilUncoveredFraction = 0.9
+const ScoutUntilUncoveredFraction = 1.0
 
 func (strategy *Strategy) Next(ctx context.Context, state *commander.State) commander.Command {
 	uncoveredCount := 0
@@ -99,7 +99,7 @@ func (strategy *Strategy) Next(ctx context.Context, state *commander.State) comm
 					garbage[name] = val
 				}
 				for name, val := range garbage {
-					garbage[name] = val.Normalize()
+					garbage[name], _, _ = val.Normalize()
 				}
 
 				packed := packer.Pack(state.CapacityX, state.CapacityY, garbage, false, 0)
@@ -151,7 +151,7 @@ func (strategy *Strategy) scout(state *commander.State) commander.Command {
 		nearest := state.Universe.Nearest(state.Planet.Name, candidates)
 		return commander.Sequential(
 			commander.GoTo(nearest),
-			commander.CollectScouting(),
+			commander.Collect(),
 		)
 	}
 	return nil

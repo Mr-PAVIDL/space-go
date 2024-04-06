@@ -3,6 +3,8 @@ package commander
 import (
 	"github.com/samber/lo"
 	"log"
+	"maps"
+	"math/rand"
 	"sort"
 	"space-go/internal/model"
 	algorithmX "space-go/pack-test/Algorithm-X"
@@ -61,6 +63,37 @@ func pack(width, height int, pairs []pair, scouting bool, minTiles int) map[stri
 	return added
 }
 
+func (p DumboPacker) PackOld(width, height int, garbage map[string]model.Garbage) map[string]model.Garbage {
+	type Pair struct {
+		Name string
+		G    model.Garbage
+	}
+	pairs := lo.MapToSlice(garbage, func(key string, val model.Garbage) Pair {
+		return Pair{Name: key, G: val}
+	})
+	sort.Slice(pairs, func(i, j int) bool {
+		return len(pairs[i].G) < len(pairs[j].G)
+	})
+	mat := model.EmptyMatrix(width, height)
+	added := map[string]model.Garbage{}
+	for _, p := range pairs {
+		if ok, g := tryFit(width, height, mat, p.G); ok {
+			added[p.Name] = g // save garbage with offset
+		}
+	}
+
+	if len(garbage) > 0 {
+		print(added, width, height)
+	}
+
+	garb := maps.Clone(garbage)
+	packState := NewPackingState(width, height, garb)
+	res := packState.Pack()
+	print(res, width, height)
+
+	return added
+}
+
 func CountTiles(garbage map[string]model.Garbage) int {
 	s := 0
 	for _, g := range garbage {
@@ -99,18 +132,71 @@ func print(added map[string]model.Garbage, width, height int) {
 	log.Print("└" + strings.Repeat("-", width*2+1) + "┘")
 }
 
-func tryFit(width int, height int, mat model.Matrix, g model.Garbage) (bool, model.Garbage) {
+func tryFitOld(width int, height int, mat model.Matrix, g model.Garbage) (bool, model.Garbage) {
 	for y := 0; y < height; y++ {
 		for x := 0; x < width; x++ {
 			if fits(mat, g, x, y) {
 				for _, cell := range g {
-					mat[y+cell[1]][x+cell[0]] = true
+					mat[y+cell[1]][x+cell[0]] = 1
 				}
 				return true, g.Add(x, y)
 			}
 		}
 	}
 	return false, model.Garbage{}
+}
+
+func tryFit(width int, height int, mat model.Matrix, g model.Garbage) (bool, model.Garbage) {
+	startRotation := rand.Intn(4)
+	for rotationAttempt := 0; rotationAttempt < 4; rotationAttempt++ {
+		rotation := (startRotation + rotationAttempt) % 4
+
+		gOrig := g
+		for r := 0; r < rotation; r++ {
+			gOrig = RotateGarbage(gOrig)
+		}
+
+		for y := 0; y < height; y++ {
+			for x := 0; x < width; x++ {
+				if fits(mat, gOrig, x, y) {
+					for _, cell := range gOrig {
+						mat[y+cell[1]][x+cell[0]] = 1
+					}
+					return true, gOrig.Add(x, y)
+				}
+			}
+		}
+	}
+	return false, model.Garbage{}
+}
+
+func RotateGarbage(g model.Garbage) model.Garbage {
+	var rotated model.Garbage
+	for _, cell := range g {
+		rotated = append(rotated, [2]int{cell[1], -cell[0]})
+	}
+	if len(rotated) > 0 {
+		rotated = NormalizeGarbage(rotated)
+	}
+	return rotated
+}
+
+func NormalizeGarbage(g model.Garbage) model.Garbage {
+	minX, minY := g[0][0], g[0][1]
+	for _, cell := range g[1:] {
+		if cell[0] < minX {
+			minX = cell[0]
+		}
+		if cell[1] < minY {
+			minY = cell[1]
+		}
+	}
+	if minX < 0 || minY < 0 {
+		for i, cell := range g {
+			g[i] = [2]int{cell[0] - minX, cell[1] - minY}
+		}
+	}
+	return g
 }
 
 func fits(mat model.Matrix, g model.Garbage, x int, y int) bool {
@@ -120,7 +206,7 @@ func fits(mat model.Matrix, g model.Garbage, x int, y int) bool {
 		if y < 0 || x < 0 || y >= len(mat) || x >= len(mat[y]) {
 			return false
 		}
-		if mat[y][x] {
+		if mat[y][x] == 1 {
 			return false
 		}
 	}
@@ -181,19 +267,4 @@ func garbageToPolyomino(g model.Garbage) algorithmX.Polyomino {
 	}
 
 	return algorithmX.Polyomino{Tiles: tiles, Name: ""} // Name will be assigned later.
-}
-
-func (p PackX) Pack(width, height int, garbage map[string]model.Garbage, scouting bool) map[string]model.Garbage {
-	var polys []algorithmX.Polyomino
-
-	// Convert each garbage piece into a named Polyomino.
-	for name, g := range garbage {
-		poly := garbageToPolyomino(g)
-		poly.Name = name // Assign the garbage piece's name to the Polyomino.
-		polys = append(polys, poly)
-	}
-
-	packedGarbage := algorithmX.SolvePacking(polys[:10], width, height)
-
-	return packedGarbage
 }
