@@ -87,12 +87,12 @@ func (p DuploPacker) Pack(w, h int, piecesOfGarbage map[string]model.Garbage, sc
 		pid++
 	}
 
-	timeout := time.Millisecond * 10
+	timeout := time.Millisecond * 50
 	if scouting {
-		timeout = 0
+		timeout = time.Millisecond * 10
 	}
 
-	grid := BoostedRawPack(polyominos, timeout, 200, w, h)
+	grid := BoostedRawPack(polyominos, timeout, 1000, w, h)
 	newGarbage := map[string]model.Garbage{}
 
 	traverse(grid, func(x, y, val int) bool {

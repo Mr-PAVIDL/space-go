@@ -11,6 +11,7 @@ import (
 	packer2 "space-go/internal/commander/packer"
 	"space-go/internal/commander/strategies"
 	"space-go/internal/model"
+	"time"
 )
 
 type Strategy struct{}
@@ -66,6 +67,7 @@ func (strategy *Strategy) Next(ctx context.Context, state *commander.State) comm
 		var nearest string
 		if len(candidates) == 0 {
 			fmt.Println("No nearest planet found, peeking at random")
+			time.Sleep(time.Second / 2)
 			nearest = lo.Sample(lo.MapToSlice(state.Universe.Planets, func(n string, _ model.Planet) string {
 				return n
 			}))
