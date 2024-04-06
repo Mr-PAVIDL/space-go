@@ -30,7 +30,7 @@ func (p DumboPacker) Pack(width, height int, garbage map[string]model.Garbage, s
 		return len(pairs[i].G) < len(pairs[j].G)
 	})
 	best := pack(width, height, pairs, scouting, minTiles)
-	for i := 0; i < 500; i++ {
+	for i := 0; i < 300; i++ {
 		lo.Shuffle(pairs)
 		result := pack(width, height, pairs, scouting, minTiles)
 		if len(result) > len(best) {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"space-go/internal/client"
 	"space-go/internal/commander"
+	"space-go/internal/commander/packer"
 	"space-go/internal/commander/strategies/simple"
 	"time"
 )
@@ -23,7 +24,7 @@ func main() {
 		Strategy: simple.New(),
 		State:    &commander.State{},
 		Status:   commander.Running,
-		Packer:   commander.DumboPacker{},
+		Packer:   packer.DuploPacker{},
 	}
 	err := cmd.Run(ctx)
 	if err != nil {

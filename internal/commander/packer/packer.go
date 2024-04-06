@@ -66,6 +66,9 @@ func (p DuploPacker) Pack(w, h int, piecesOfGarbage map[string]model.Garbage, sc
 	pid2polyomino := map[int]*Polyomino{}
 	pid := 1
 	for gid, garbage := range piecesOfGarbage {
+		if len(garbage) == 0 {
+			continue
+		}
 		g, gw, gh := garbage.Normalize()
 		mat := model.EmptyMatrix(gw, gh)
 		for _, cell := range g {
@@ -84,9 +87,9 @@ func (p DuploPacker) Pack(w, h int, piecesOfGarbage map[string]model.Garbage, sc
 		pid++
 	}
 
-	timeout := time.Millisecond * 500
+	timeout := time.Millisecond * 50
 	if scouting {
-		timeout = time.Millisecond * 100
+		timeout = time.Millisecond * 10
 	}
 
 	grid := BoostedRawPack(polyominos, timeout, 10_000, w, h)

@@ -19,9 +19,6 @@ type Server struct {
 	planets    map[string]model.Planet
 	ship       model.Ship
 	allGarbage map[string]model.Garbage
-	//trunk     [][]string // keep in sync with ship.garbage!
-	totalFuel      int
-	totalDeposited int
 }
 
 func FromDump(planetsPath, graphPath string) Server {
