@@ -121,7 +121,8 @@ func (s *Server) Travel(request model.TravelRequest) (model.TravelResponse, erro
 	if s.ship.Planet.Name == "Eden" {
 		s.totalDeposited += len(s.ship.Garbage)
 		s.ship.Garbage = map[string]model.Garbage{}
-		fmt.Println("welcome to eden, total deposited garbage:", s.totalDeposited)
+		fmt.Println("welcome to eden, total deposited garbage:", s.totalDeposited, "fuel: ", s.totalFuel,
+			"fraction: ", float64(s.totalFuel)/float64(s.totalDeposited))
 		if s.totalDeposited > len(s.allGarbage)-10 {
 			for name, planet := range s.planets {
 				if len(planet.Garbage) != 0 {

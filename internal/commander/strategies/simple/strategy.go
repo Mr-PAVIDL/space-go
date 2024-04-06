@@ -30,7 +30,7 @@ func MakeBigGarbage(size int) map[string]model.Garbage {
 	return map[string]model.Garbage{"big_garbage": g}
 }
 
-const ScoutUntilUncoveredFraction = 1.0
+const ScoutUntilUncoveredFraction = 0.5
 
 var confirmOverdrive = false
 
@@ -42,10 +42,71 @@ func (strategy *Strategy) Next(ctx context.Context, state *commander.State) comm
 	//	}
 	//}
 	//if float64(uncoveredCount) < float64(len(state.Universe.Planets))*ScoutUntilUncoveredFraction {
-	if scout := strategy.scout(state); scout != nil {
-		return scout
-	}
+	//if scout := strategy.scout(state); scout != nil {
+	//	return scout
 	//}
+	//}
+	distFromUs, _ := state.Universe.DijkstraWithPaths(state.Planet.Name)
+	distFromHome, _ := state.Universe.DijkstraWithPaths(strategies.EdenName)
+	var minimalCells int
+	if len(state.Garbage) == 0 {
+		minimalCells = int(math.Ceil(float64(state.CapacityY*state.CapacityX) * 0.30))
+	} else {
+		minimalCells = commander.CountTiles(state.Garbage) + int(math.Ceil(float64(state.CapacityY*state.CapacityX)*0.05))
+	}
+	//bestDistance := 1e9
+	var bestRimPlanet model.Planet
+	bestRimPacking := map[string]model.Garbage{}
+	for _, planet := range state.Universe.Planets {
+		if state.Planet.Name == strategies.EdenName {
+			continue
+		}
+
+		if planet.Garbage != nil && len(planet.Garbage) > 0 {
+			//log.Println("dist from us: ", distFromUs[planet.Name], ", dist to home: ", distFromUs[strategies.EdenName])
+			//if distFromUs[planet.Name] > 2 * distFromUs[strategies.EdenName] {
+			//	continue
+			//}
+
+			packing := packer2.DuploPacker{}.Pack(state.CapacityX, state.CapacityY, model.PileGarbage(planet.Garbage, state.Garbage), true, 0)
+			if commander.CountTiles(packing) < minimalCells {
+				continue
+			}
+
+			distFromPlanet, _ := state.Universe.DijkstraWithPaths(state.Planet.Name)
+			me2Eden := distFromUs[strategies.EdenName]
+			eden2p := distFromHome[planet.Name]
+			me2p := distFromUs[planet.Name]
+			p2Eden := distFromPlanet[strategies.EdenName]
+			normal := me2Eden + eden2p + p2Eden
+			rim := me2p + p2Eden
+			//log.Println("me2eden: ", me2Eden,
+			//	"eden2p: ", eden2p,
+			//	"me2p: ", me2p,
+			//	"p2eden: ", p2Eden,
+			//	"normal: ", normal,
+			//	"rim: ", rim,
+			//)
+
+			if float64(normal) < float64(rim) {
+				continue
+			}
+
+			if commander.CountTiles(bestRimPacking) < commander.CountTiles(packing) {
+				//if bestDistance > float64(rim) {
+				//	bestDistance = float64(rim)
+				bestRimPacking = packing
+				bestRimPlanet = planet
+			}
+		}
+	}
+	if bestRimPlanet.Name != "" {
+		log.Println("OPTIMIZATION: using rim shortcut")
+		return commander.Sequential(
+			commander.GoTo(bestRimPlanet.Name),
+			commander.CollectWithProposal(bestRimPacking),
+		)
+	}
 
 	if state.Planet.Name == strategies.EdenName || len(state.Garbage) == 0 {
 		// picking the planet to go to next
@@ -79,7 +140,8 @@ func (strategy *Strategy) Next(ctx context.Context, state *commander.State) comm
 				return n
 			}))
 		} else {
-			nearest = lo.Sample(candidates) //state.Universe.Nearest(state.Planet.Name, candidates)
+			nearest = lo.Sample(candidates)
+			//state.Universe.Farthest(state.Planet.Name, candidates)
 		}
 
 		return commander.Sequential(
