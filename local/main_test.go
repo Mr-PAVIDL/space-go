@@ -1,4 +1,4 @@
-package main
+package local
 
 import (
 	"encoding/json"
@@ -10,6 +10,7 @@ import (
 	"space-go/internal/model"
 	"strconv"
 	"strings"
+	"testing"
 	"time"
 )
 
@@ -161,7 +162,38 @@ func m2p(m string, id int) *packer.Polyomino {
 	}
 }
 
-func main() {
+func BenchmarkName(b *testing.B) {
+	file, err := os.ReadFile("C:\\Users\\ischenkx\\code\\eden\\space-go\\local\\garbage.json")
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+
+	var garbage map[string]model.Garbage
+	if err := json.Unmarshal(file, &garbage); err != nil {
+		log.Fatal(err)
+	}
+
+	polyminoes := []*packer.Polyomino{}
+	for i, mask := range masks {
+		polyminoes = append(polyminoes, m2p(mask, 20+i*20))
+	}
+
+	c := 15
+	w, h := 8, 11
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		var ps []*packer.Polyomino
+
+		for j := 0; j < c; j++ {
+			ps = append(ps, lo.Sample(polyminoes))
+		}
+		_ = packer.BoostedRawPack(ps, 0, 10000, w, h)
+	}
+}
+func Bench(b testing.B) {
 	file, err := os.ReadFile("C:\\Users\\ischenkx\\code\\eden\\space-go\\local\\garbage.json")
 	if err != nil {
 		log.Fatal(err)
@@ -189,7 +221,7 @@ func main() {
 
 		fmt.Println("Starting")
 		t1 := time.Now()
-		data := packer.BoostedRawPack(ps, 0, 1000, w, h)
+		data := packer.BoostedRawPack(ps, 0, 10000, w, h)
 		fmt.Println("Elapsed:", time.Since(t1))
 
 		fmt.Println("[")
