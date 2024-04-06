@@ -2,38 +2,165 @@ package packer
 
 import (
 	"cmp"
+	"github.com/samber/lo"
 	"slices"
 	"space-go/internal/model"
+	"time"
 )
+
+type Sorter func(a, b *Polyomino) int
+
+var (
+	ReverseAreaSorter = func(a, b *Polyomino) int {
+		return -cmp.Compare(area(a.Matrix), area(b.Matrix))
+	}
+
+	AreaSorter = func(a, b *Polyomino) int {
+		return cmp.Compare(area(a.Matrix), area(b.Matrix))
+	}
+
+	ReverseCellsAmountSorter = func(a, b *Polyomino) int {
+		return -cmp.Compare(countCells(a.Matrix), countCells(b.Matrix))
+	}
+
+	CellsAmountSorter = func(a, b *Polyomino) int {
+		return -cmp.Compare(countCells(a.Matrix), countCells(b.Matrix))
+	}
+
+	RandomSorter = func(a, b *Polyomino) int {
+		return lo.Sample([]int{-1, 0, 1})
+	}
+)
+
+type GridStat struct {
+	TotalGarbagePieces int
+	TotalGarbageCells  int
+	TotalCells         int
+	AverageCost        float64
+}
+
+func Stat(grid model.Matrix) (stat GridStat) {
+	index := map[int]struct{}{}
+	traverse(grid, func(_, _, val int) bool {
+		stat.TotalCells++
+		if val == 0 {
+			return true
+		}
+
+		stat.TotalGarbageCells++
+		if _, ok := index[val]; !ok {
+			stat.TotalGarbagePieces++
+			index[val] = struct{}{}
+		}
+
+		return true
+	})
+
+	return stat
+}
 
 type DuploPacker struct{}
 
-func (d DuploPacker) Pack(w, h int, pGarbage map[string]model.Garbage) map[string]model.Garbage {
-	polyominos := make([]*polyomino, 0, len(pGarbage))
-	pid2polyomino := map[int]*polyomino{}
-
+func (p DuploPacker) Pack(w, h int, piecesOfGarbage map[string]model.Garbage, scouting bool, minTiles int) map[string]model.Garbage {
+	polyominos := make([]*Polyomino, 0, len(piecesOfGarbage))
+	pid2polyomino := map[int]*Polyomino{}
 	pid := 1
-	for gid, garbage := range pGarbage {
+	for gid, garbage := range piecesOfGarbage {
 		g, gw, gh := garbage.Normalize()
 		mat := model.EmptyMatrix(gw, gh)
 		for _, cell := range g {
 			mat[cell[1]][cell[0]] = 1
 		}
 
-		p := &polyomino{
-			matrix:    mat,
-			id:        pid,
-			garbageId: gid,
+		p := &Polyomino{
+			Matrix:    mat,
+			ID:        pid,
+			GarbageID: gid,
 		}
 
 		polyominos = append(polyominos, p)
-		pid2polyomino[p.id] = p
+		pid2polyomino[p.ID] = p
 
 		pid++
 	}
 
-	// algorithm
+	timeout := time.Millisecond * 500
+	if scouting {
+		timeout = time.Millisecond * 100
+	}
 
+	grid := BoostedRawPack(polyominos, timeout, 10_000, w, h)
+	newGarbage := map[string]model.Garbage{}
+
+	traverse(grid, func(x, y, val int) bool {
+		if val == 0 {
+			return true
+		}
+
+		p := pid2polyomino[val]
+		newGarbage[p.GarbageID] = append(newGarbage[p.GarbageID], model.Cell{x, y})
+
+		return true
+	})
+
+	return newGarbage
+}
+
+func BoostedRawPack(polyominos []*Polyomino, timeout time.Duration, countLimit int, w, h int) model.Matrix {
+	now := time.Now()
+	limit := now.Add(timeout)
+
+	var optimal model.Matrix
+	var stat GridStat
+
+	for _, sorter := range []Sorter{
+		ReverseAreaSorter,
+		AreaSorter,
+		ReverseCellsAmountSorter,
+		CellsAmountSorter,
+	} {
+		avgCost, result := RawPack(polyominos, sorter, w, h)
+		lstat := Stat(result)
+		lstat.AverageCost = avgCost
+		if isStatBetter(lstat, stat) {
+			stat = lstat
+			optimal = result
+		}
+
+		if time.Now().After(limit) {
+			return optimal
+		}
+	}
+
+	for i := 0; i < countLimit; i++ {
+		avgCost, result := RawPack(polyominos, RandomSorter, w, h)
+		lstat := Stat(result)
+		lstat.AverageCost = avgCost
+		if isStatBetter(lstat, stat) {
+			stat = lstat
+			optimal = result
+		}
+
+		if time.Now().After(limit) {
+			return optimal
+		}
+	}
+
+	return optimal
+}
+
+func isStatBetter(stat1, stat2 GridStat) bool {
+	if stat1.AverageCost > stat2.AverageCost {
+		return true
+	}
+	if stat1.TotalGarbagePieces > stat2.TotalGarbagePieces {
+		return true
+	}
+
+	return false
+}
+
+func RawPack(polyominos []*Polyomino, sorter func(a, b *Polyomino) int, w, h int) (averageCost float64, mat model.Matrix) {
 	grid := model.EmptyMatrix(w, h)
 	costMap := model.EmptyMatrix(w, h)
 	for _, y := range []int{0, h - 1} {
@@ -47,9 +174,7 @@ func (d DuploPacker) Pack(w, h int, pGarbage map[string]model.Garbage) map[strin
 		}
 	}
 
-	slices.SortFunc(polyominos, func(a, b *polyomino) int {
-		return -cmp.Compare(area(a.matrix), area(b.matrix))
-	})
+	slices.SortFunc(polyominos, sorter)
 
 	for _, p := range polyominos {
 		found := false
@@ -57,7 +182,7 @@ func (d DuploPacker) Pack(w, h int, pGarbage map[string]model.Garbage) map[strin
 		x := 0
 		y := 0
 		rot := 0
-		sp := p.matrix
+		sp := p.Matrix
 		for rotationId := 0; rotationId < 4; rotationId++ {
 			traverse(grid, func(gx, gy, gv int) bool {
 				valid := true
@@ -99,14 +224,14 @@ func (d DuploPacker) Pack(w, h int, pGarbage map[string]model.Garbage) map[strin
 		if !found {
 			continue
 		}
-		used := rotateN(rot, p.matrix)
+		used := rotateN(rot, p.Matrix)
 		traverse(used, func(dx, dy, dv int) bool {
 			if dv == 0 {
 				return true
 			}
 
 			rx, ry := x+dx, y+dy
-			grid[ry][rx] = p.id
+			grid[ry][rx] = p.ID
 			flowerVicinity(rx, ry, func(fx, fy int) bool {
 				if fx < 0 || fy < 0 {
 					return true
@@ -121,26 +246,19 @@ func (d DuploPacker) Pack(w, h int, pGarbage map[string]model.Garbage) map[strin
 		})
 	}
 
-	newGarbage := map[string]model.Garbage{}
-
-	traverse(grid, func(x, y, val int) bool {
-		if val == 0 {
-			return true
-		}
-
-		p := pid2polyomino[val]
-		newGarbage[p.garbageId] = append(newGarbage[p.garbageId], model.Cell{x, y})
-
+	averageCost = 0.0
+	traverse(costMap, func(x, y, val int) bool {
+		averageCost += float64(val) / float64(w*h)
 		return true
 	})
 
-	return newGarbage
+	return averageCost, grid
 }
 
-type polyomino struct {
-	matrix    model.Matrix
-	id        int
-	garbageId string
+type Polyomino struct {
+	Matrix    model.Matrix
+	ID        int
+	GarbageID string
 }
 
 func rotateN(n int, m model.Matrix) model.Matrix {

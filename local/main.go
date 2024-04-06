@@ -13,6 +13,154 @@ import (
 	"time"
 )
 
+var masks = []string{
+	`
+	!!
+	!!
+	`,
+	`
+	!!
+	`,
+	`
+	!!!!
+	#!##
+	#!##
+	#!!#
+	`,
+	`
+	!!!
+	#!#
+	#!!
+	`,
+	`
+	#!##
+	!!!!
+	!###
+	!###
+	`,
+	`
+	!!!
+	!##
+	!!!
+	#!#
+	`,
+	`
+	##!#
+	##!!
+	##!#
+	!!!!
+	`,
+	`
+	!!!!
+	!##!
+	!##!
+	!!#!
+	`,
+	`
+	!!!#
+	#!!!
+	`,
+	`
+	!!!
+	!#!
+	!#!
+	!#!
+	`,
+	`
+	!!!!
+	!#!#
+	##!!
+	####
+	`,
+	`
+	!###
+	!!!!
+	`,
+	`
+	!#
+	!!
+	!!
+	!#
+	`,
+	`
+	!#!
+	!!!
+	!##
+	!##
+	`,
+	`
+	!#
+	!!
+	!!
+	#!
+	`,
+	`
+	!!!
+	`,
+	`
+	!!!
+	!##
+	!##
+	!!!
+	`,
+	`
+	!!##
+	#!!!
+	###!
+	####
+	`,
+	`
+	#!
+	#!
+	!!
+	!!
+	`,
+	`
+	!!!
+	`,
+	`
+	#!##
+	!!!!
+	`,
+	`
+	##!!
+	!!!#
+	!###
+	!!!!
+	`,
+	`
+	###!
+	!#!!
+	!#!#
+	!!!#
+	`,
+}
+
+func m2p(m string, id int) *packer.Polyomino {
+	mat := model.Matrix{}
+	for _, line := range strings.Split(m, "\n") {
+		var row []int
+		line = strings.TrimSpace(line)
+		if len(line) == 0 {
+			continue
+		}
+		for _, c := range line {
+			if c == '!' {
+				row = append(row, 1)
+			} else {
+				row = append(row, 0)
+			}
+		}
+		mat = append(mat, row)
+	}
+
+	return &packer.Polyomino{
+		Matrix:    mat,
+		ID:        id,
+		GarbageID: "",
+	}
+}
+
 func main() {
 	file, err := os.ReadFile("C:\\Users\\ischenkx\\code\\eden\\space-go\\local\\garbage.json")
 	if err != nil {
@@ -25,17 +173,33 @@ func main() {
 		log.Fatal(err)
 	}
 
-	t1 := time.Now()
-
-	data, _ := packer.Pack(garbage, 8, 11)
-
-	fmt.Println(time.Since(t1))
-
-	fmt.Println("[")
-	for _, row := range data {
-		fmt.Printf("[%s],\n", strings.Join(lo.Map(row, func(item int, _ int) string {
-			return strconv.Itoa(item)
-		}), ", "))
+	polyminoes := []*packer.Polyomino{}
+	for i, mask := range masks {
+		polyminoes = append(polyminoes, m2p(mask, 20+i*20))
 	}
-	fmt.Println("]")
+
+	c := 15
+	w, h := 8, 11
+	for i := 0; i < 10; i++ {
+		var ps []*packer.Polyomino
+
+		for j := 0; j < c; j++ {
+			ps = append(ps, lo.Sample(polyminoes))
+		}
+
+		fmt.Println("Starting")
+		t1 := time.Now()
+		data := packer.BoostedRawPack(ps, time.Second, 10_000, w, h)
+		fmt.Println("Elapsed:", time.Since(t1))
+
+		fmt.Println("[")
+		for _, row := range data {
+			fmt.Printf("[%s],\n", strings.Join(lo.Map(row, func(item int, _ int) string {
+				return strconv.Itoa(item)
+			}), ", "))
+		}
+		fmt.Println("]")
+		fmt.Println("----------------------")
+	}
+
 }
