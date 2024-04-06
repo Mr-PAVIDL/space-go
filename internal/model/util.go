@@ -27,7 +27,9 @@ func allocateMatrix(width, height int) Matrix {
 		subPools[height] = pool
 	}
 
-	return pool.Get().(Matrix)
+	m := pool.Get().(Matrix)
+	m.Zero()
+	return m
 }
 
 func deallocateMatrix(mat Matrix) {
@@ -65,6 +67,14 @@ func EmptyMatrix(width, height int) Matrix {
 
 func (m Matrix) Close() {
 	deallocateMatrix(m)
+}
+
+func (m Matrix) Zero() {
+	for _, row := range m {
+		for i := range row {
+			row[i] = 0
+		}
+	}
 }
 
 // func (g Garbage) Matrix() Matrix {
