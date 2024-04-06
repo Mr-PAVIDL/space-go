@@ -46,8 +46,11 @@ func (commander *Commander) init(ctx context.Context) error {
 	}
 
 	state := &State{
-		Planet:   universeResponse.Ship.Planet,
-		FuelUsed: universeResponse.Ship.FuelUsed,
+		Planet:    universeResponse.Ship.Planet,
+		FuelUsed:  universeResponse.Ship.FuelUsed,
+		CapacityX: universeResponse.Ship.CapacityX,
+		CapacityY: universeResponse.Ship.CapacityY,
+		Garbage:   universeResponse.Ship.Garbage,
 	}
 
 	for _, garbage := range universeResponse.Ship.Garbage {
