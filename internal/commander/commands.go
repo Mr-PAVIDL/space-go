@@ -75,6 +75,9 @@ func Collect() CollectCommand {
 	return CollectCommand{proposal: nil}
 }
 
+var cntDeposits int = 0
+var sumDeposits int = 0
+
 func (cmd CollectCommand) Execute(ctx context.Context, commander *Commander) error {
 	if len(commander.State.Planet.Garbage) == 0 {
 		return nil
@@ -106,6 +109,11 @@ func (cmd CollectCommand) Execute(ctx context.Context, commander *Commander) err
 	}
 	//commander.State.Garbage = newGarbage
 	if len(newGarbage) != 0 {
+		sumDeposits += CountTiles(newGarbage)
+		cntDeposits++
+		log.Println("deposit stats: ", float64(sumDeposits)/float64(cntDeposits), "avg deposit size / ",
+			commander.State.CapacityY*commander.State.CapacityX)
+
 		response, err := commander.API.CollectGarbage(ctx, model.CollectRequest{Garbage: newGarbage})
 
 		if err != nil {

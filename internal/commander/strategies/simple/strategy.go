@@ -8,6 +8,7 @@ import (
 	"math"
 	"os"
 	"space-go/internal/commander"
+	packer2 "space-go/internal/commander/packer"
 	"space-go/internal/commander/strategies"
 	"space-go/internal/model"
 )
@@ -31,17 +32,17 @@ func MakeBigGarbage(size int) map[string]model.Garbage {
 const ScoutUntilUncoveredFraction = 1.0
 
 func (strategy *Strategy) Next(ctx context.Context, state *commander.State) commander.Command {
-	uncoveredCount := 0
-	for _, planet := range state.Universe.Planets {
-		if planet.Garbage == nil {
-			uncoveredCount++
-		}
+	//uncoveredCount := 0
+	//for _, planet := range state.Universe.Planets {
+	//	if planet.Garbage == nil {
+	//		uncoveredCount++
+	//	}
+	//}
+	//if float64(uncoveredCount) < float64(len(state.Universe.Planets))*ScoutUntilUncoveredFraction {
+	if scout := strategy.scout(state); scout != nil {
+		return scout
 	}
-	if float64(uncoveredCount) < float64(len(state.Universe.Planets))*ScoutUntilUncoveredFraction {
-		if scout := strategy.scout(state); scout != nil {
-			return scout
-		}
-	}
+	//}
 
 	if state.Planet.Name == strategies.EdenName || len(state.Garbage) == 0 {
 		// picking the planet to go to next
@@ -53,7 +54,7 @@ func (strategy *Strategy) Next(ctx context.Context, state *commander.State) comm
 			// if garbage is an empty map, then the planet is emptied
 			if planet.Garbage == nil || len(planet.Garbage) > 0 {
 				if planet.Garbage != nil && commander.CountTiles(planet.Garbage) < minTiles {
-					//continue
+					continue
 				}
 				candidates = append(candidates, planet.Name)
 			}
@@ -70,7 +71,7 @@ func (strategy *Strategy) Next(ctx context.Context, state *commander.State) comm
 			commander.Collect(),
 		)
 	} else {
-		packer := commander.DumboPacker{}
+		packer := packer2.DuploPacker{}
 		if strategy.hasGuaranteedSpace(state) {
 			{
 				candidates := []string{}
@@ -102,7 +103,7 @@ func (strategy *Strategy) Next(ctx context.Context, state *commander.State) comm
 					garbage[name], _, _ = val.Normalize()
 				}
 
-				packed := packer.Pack(state.CapacityX, state.CapacityY, garbage, false, 0)
+				packed := packer.Pack(state.CapacityX, state.CapacityY, garbage, true, 0)
 				was, now := commander.CountTiles(state.Garbage), commander.CountTiles(packed)
 				minimalCells := int(math.Ceil(float64(state.CapacityY*state.CapacityX) * 0.05))
 
@@ -128,9 +129,9 @@ func (strategy *Strategy) Next(ctx context.Context, state *commander.State) comm
 }
 
 func (strategy *Strategy) hasGuaranteedSpace(state *commander.State) bool {
-	packer := commander.DumboPacker{}
+	packer := packer2.DuploPacker{}
 	myGarbage := maps.Clone(state.Garbage)
-	haveALotOfSpace := packer.Pack(state.CapacityX, state.CapacityY, model.PileGarbage(myGarbage, MakeBigGarbage(4)), false, 0)
+	haveALotOfSpace := packer.Pack(state.CapacityX, state.CapacityY, model.PileGarbage(myGarbage, MakeBigGarbage(4)), true, 0)
 	return len(haveALotOfSpace) > len(myGarbage)
 }
 

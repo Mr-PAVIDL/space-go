@@ -5,7 +5,7 @@ import (
 )
 
 func main() {
-	s := server.FromDump("dumps/planet_dump_3.json", "dumps/graph_dump_3.json")
+	s := server.FromDump("dumps/planet_dump_2_fix.json", "dumps/graph_dump_2.json")
 	err := server.Run(s)
 	if err != nil {
 		panic(err)
