@@ -1,6 +1,9 @@
 package main
 
-import algorithmX "space-go/pack-test/Algorithm-X"
+import (
+	"fmt"
+	algorithmX "space-go/pack-test/Algorithm-X"
+)
 
 func generatePolyominoes() []algorithmX.Polyomino {
 	return []algorithmX.Polyomino{
@@ -32,6 +35,6 @@ func main() {
 	z := algorithmX.Polyomino{Tiles: [][]bool{{true, true, false}, {false, true, false}, {false, true, true}}}
 	pentominoes := []algorithmX.Polyomino{f, i, l, n, p, t, u, v, w, x, y, z}
 
-	algorithmX.SolvePacking(pentominoes, 10, 6)
-	algorithmX.SolvePacking(generatePolyominoes(), 8, 11)
+	fmt.Println(algorithmX.SolvePacking(pentominoes, 10, 6))
+	fmt.Println(algorithmX.SolvePacking(generatePolyominoes(), 8, 11))
 }

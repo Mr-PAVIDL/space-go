@@ -29,6 +29,16 @@ func (g Garbage) Add(x, y int) Garbage {
 	return g2
 }
 
+func PileGarbage(gs ...map[string]Garbage) map[string]Garbage {
+	result := make(map[string]Garbage)
+	for _, g := range gs {
+		for s, garbage := range g {
+			result[s] = garbage
+		}
+	}
+	return result
+}
+
 //
 
 func (g Garbage) Normalize() (Garbage, int, int) {

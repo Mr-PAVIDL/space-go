@@ -3,6 +3,7 @@ package commander
 import (
 	"context"
 	"fmt"
+	"log"
 	"maps"
 	"space-go/internal/model"
 	"strings"
@@ -45,6 +46,9 @@ func (cmd TravelCommand) Execute(ctx context.Context, commander *Commander) erro
 	}
 	commander.State.Universe.Planets[commander.State.Planet.Name] = commander.State.Planet
 	commander.State.Garbage = response.ShipGarbage
+	if commander.State.Garbage == nil {
+		commander.State.Garbage = map[string]model.Garbage{}
+	}
 
 	return nil
 }
@@ -54,13 +58,22 @@ func (cmd TravelCommand) String() string {
 }
 
 type CollectCommand struct {
+	proposal map[string]model.Garbage
+}
+
+func CollectWithProposal(proposal map[string]model.Garbage) CollectCommand {
+	return CollectCommand{proposal: proposal}
 }
 
 func Collect() CollectCommand {
-	return CollectCommand{}
+	return CollectCommand{proposal: nil}
 }
 
 func (cmd CollectCommand) Execute(ctx context.Context, commander *Commander) error {
+	if len(commander.State.Planet.Garbage) == 0 {
+		return nil
+	}
+
 	garbage := maps.Clone(commander.State.Garbage)
 	for name, val := range commander.State.Planet.Garbage {
 		garbage[name] = val
@@ -69,10 +82,25 @@ func (cmd CollectCommand) Execute(ctx context.Context, commander *Commander) err
 		garbage[name] = val.Normalize()
 	}
 	newGarbage := commander.Packer.Pack(commander.State.CapacityX, commander.State.CapacityY, garbage)
+	if len(cmd.proposal) > len(newGarbage) {
+		newGarbage = cmd.proposal
+	}
+
+	if len(commander.State.Garbage) > len(newGarbage) {
+		log.Println("didn't improve: ", len(commander.State.Garbage),
+			"->", len(newGarbage), commander.State.Garbage, newGarbage)
+		return nil
+	}
 	//commander.State.Garbage = newGarbage
 	if len(newGarbage) != 0 {
 		response, err := commander.API.CollectGarbage(ctx, model.CollectRequest{Garbage: newGarbage})
+
 		if err != nil {
+			if strings.Contains(err.Error(), "no garbage on this planet") {
+				commander.State.Planet.Garbage = map[string]model.Garbage{}
+				commander.State.Universe.Planets[commander.State.Planet.Name] = commander.State.Planet
+			}
+
 			return err
 		}
 		planetGarbage := map[string]model.Garbage{}
@@ -80,7 +108,11 @@ func (cmd CollectCommand) Execute(ctx context.Context, commander *Commander) err
 			planetGarbage[id] = garbage[id]
 		}
 		commander.State.Planet.Garbage = planetGarbage
+		commander.State.Universe.Planets[commander.State.Planet.Name] = commander.State.Planet
 		commander.State.Garbage = response.Garbage
+		if commander.State.Garbage == nil {
+			commander.State.Garbage = make(map[string]model.Garbage)
+		}
 	}
 
 	return nil
