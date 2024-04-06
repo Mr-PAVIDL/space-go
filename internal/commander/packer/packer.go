@@ -133,6 +133,8 @@ func BoostedRawPack(polyominos []*Polyomino, timeout time.Duration, countLimit i
 		if isStatBetter(lstat, stat) {
 			stat = lstat
 			optimal = result
+		} else {
+			result.Close()
 		}
 
 		if timeout > 0 {
@@ -149,6 +151,8 @@ func BoostedRawPack(polyominos []*Polyomino, timeout time.Duration, countLimit i
 		if isStatBetter(lstat, stat) {
 			stat = lstat
 			optimal = result
+		} else {
+			result.Close()
 		}
 
 		if timeout > 0 {
@@ -198,7 +202,9 @@ func RawPack(polyominos []*Polyomino, sorter func(a, b *Polyomino) int, w, h int
 		y := 0
 		rot := 0
 		sp := p.Matrix
+		rotations := map[int]model.Matrix{}
 		for rotationId := 0; rotationId < 4; rotationId++ {
+			rotations[rotationId] = sp
 			traverse(grid, func(gx, gy, gv int) bool {
 				valid := true
 				localCost := 0
@@ -232,14 +238,13 @@ func RawPack(polyominos []*Polyomino, sorter func(a, b *Polyomino) int, w, h int
 
 				return true
 			})
-
 			sp = sp.RotateCW()
 		}
 
 		if !found {
 			continue
 		}
-		used := rotateN(rot, p.Matrix)
+		used := rotations[rot]
 		traverse(used, func(dx, dy, dv int) bool {
 			if dv == 0 {
 				return true
@@ -259,6 +264,15 @@ func RawPack(polyominos []*Polyomino, sorter func(a, b *Polyomino) int, w, h int
 			})
 			return true
 		})
+
+		for i := 1; i < 4; i++ {
+			if i == rot {
+				continue
+			}
+			if l, ok := rotations[i]; ok {
+				l.Close()
+			}
+		}
 	}
 
 	averageCost = 0.0

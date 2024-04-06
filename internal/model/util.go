@@ -1,13 +1,70 @@
 package model
 
+import "sync"
+
 type Matrix [][]int
 
-func EmptyMatrix(width, height int) Matrix {
-	mat := make(Matrix, height)
-	for i := 0; i < height; i++ {
-		mat[i] = make([]int, width)
+var pools = map[int]map[int]*sync.Pool{}
+
+func allocateMatrix(width, height int) Matrix {
+	subPools, ok := pools[width]
+	if !ok {
+		subPools = make(map[int]*sync.Pool)
+		pools[width] = subPools
 	}
-	return mat
+
+	pool, ok := subPools[height]
+	if !ok {
+		pool = &sync.Pool{
+			New: func() any {
+				mat := make(Matrix, height)
+				for i := 0; i < height; i++ {
+					mat[i] = make([]int, width)
+				}
+				return mat
+			},
+		}
+		subPools[height] = pool
+	}
+
+	return pool.Get().(Matrix)
+}
+
+func deallocateMatrix(mat Matrix) {
+	if mat == nil {
+		return
+	}
+	h := len(mat)
+	if h == 0 {
+		return
+	}
+
+	w := len(mat[0])
+	subPools, ok := pools[w]
+	if !ok {
+		return
+	}
+
+	pool, ok := subPools[h]
+	if !ok {
+		return
+	}
+
+	pool.Put(mat)
+}
+
+func EmptyMatrix(width, height int) Matrix {
+	//mat := make(Matrix, height)
+	//for i := 0; i < height; i++ {
+	//	mat[i] = make([]int, width)
+	//}
+	//return mat
+
+	return allocateMatrix(width, height)
+}
+
+func (m Matrix) Close() {
+	deallocateMatrix(m)
 }
 
 // func (g Garbage) Matrix() Matrix {
