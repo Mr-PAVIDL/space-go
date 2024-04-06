@@ -16,12 +16,14 @@ func (s *httpServer) getUniverse(w http.ResponseWriter, _ *http.Request) {
 	data, err := json.Marshal(s.Universe())
 	if err != nil {
 		fmt.Printf("failed to serve get universe: %s", err)
+		io.WriteString(w, err.Error())
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 	_, err = io.WriteString(w, string(data))
 	if err != nil {
 		fmt.Printf("failed to serve get universe: %s", err)
+		io.WriteString(w, err.Error())
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -34,12 +36,14 @@ func (s *httpServer) postTravel(w http.ResponseWriter, r *http.Request) {
 	bytes, err := io.ReadAll(r.Body)
 	if err != nil {
 		fmt.Printf("failed to serve post travel: %s", err)
+		io.WriteString(w, err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	err = json.Unmarshal(bytes, &req)
 	if err != nil {
 		fmt.Printf("failed to serve post travel: %s", err)
+		io.WriteString(w, err.Error())
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -49,12 +53,14 @@ func (s *httpServer) postTravel(w http.ResponseWriter, r *http.Request) {
 	data, err := json.Marshal(resp)
 	if err != nil {
 		fmt.Printf("failed to serve post travel: %s", err)
+		io.WriteString(w, err.Error())
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 	_, err = io.WriteString(w, string(data))
 	if err != nil {
 		fmt.Printf("failed to serve post travel: %s", err)
+		io.WriteString(w, err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -67,12 +73,14 @@ func (s *httpServer) postCollect(w http.ResponseWriter, r *http.Request) {
 	bytes, err := io.ReadAll(r.Body)
 	if err != nil {
 		fmt.Printf("failed to serve post collect: %s", err)
+		io.WriteString(w, err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	err = json.Unmarshal(bytes, &req)
 	if err != nil {
 		fmt.Printf("failed to serve post collect: %s", err)
+		io.WriteString(w, err.Error())
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -82,12 +90,14 @@ func (s *httpServer) postCollect(w http.ResponseWriter, r *http.Request) {
 	data, err := json.Marshal(resp)
 	if err != nil {
 		fmt.Printf("failed to serve post collect: %s", err)
+		io.WriteString(w, err.Error())
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 	_, err = io.WriteString(w, string(data))
 	if err != nil {
 		fmt.Printf("failed to serve post collect: %s", err)
+		io.WriteString(w, err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}

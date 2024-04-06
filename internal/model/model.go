@@ -94,6 +94,28 @@ func (u *Universe) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+func (u Universe) MarshalJSON() ([]byte, error) {
+	var raw [][]json.RawMessage
+	for _, transition := range u {
+		fromPlanet, err := json.Marshal(transition.FromPlanet)
+		if err != nil {
+			return nil, fmt.Errorf("marshalling fromPlanet: %w", err)
+		}
+		toPlanet, err := json.Marshal(transition.ToPlanet)
+		if err != nil {
+			return nil, fmt.Errorf("marshalling toPlanet: %w", err)
+		}
+		fuelCost, err := json.Marshal(transition.FuelCost)
+		if err != nil {
+			return nil, fmt.Errorf("marshalling fuelCost: %w", err)
+		}
+
+		raw = append(raw, []json.RawMessage{fromPlanet, toPlanet, fuelCost})
+	}
+
+	return json.Marshal(raw)
+}
+
 type Round struct {
 	StartAt     string `json:"startAt"`
 	EndAt       string `json:"endAt"`
