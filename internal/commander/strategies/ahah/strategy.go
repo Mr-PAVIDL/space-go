@@ -25,7 +25,6 @@ func (strategy *Strategy) Next(ctx context.Context, state *commander.State) comm
 			}
 		}
 
-		//fmt.Println("candidates", candidates)
 		if len(candidates) == 0 {
 			return commander.Idle(time.Second)
 		}

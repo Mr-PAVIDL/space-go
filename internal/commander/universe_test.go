@@ -1,6 +1,7 @@
 package commander
 
 import (
+	"reflect"
 	"space-go/internal/model"
 	"testing"
 )
@@ -136,3 +137,52 @@ func TestUniverse_Nearest(t *testing.T) {
 //
 //	return nearestPlanet
 //}
+
+func TestUniverse_ShortestPath(t *testing.T) {
+	tests := []struct {
+		name     string
+		universe Universe
+		from     string
+		to       string
+		wantPath []string
+	}{
+		{
+			name: "Direct Path",
+			universe: *NewUniverse([]model.Transition{
+				{FromPlanet: "Earth", ToPlanet: "Mars", FuelCost: 10},
+			}),
+			from:     "Earth",
+			to:       "Mars",
+			wantPath: []string{"Earth", "Mars"},
+		},
+		{
+			name: "Indirect Path",
+			universe: *NewUniverse([]model.Transition{
+				{FromPlanet: "Earth", ToPlanet: "Alpha", FuelCost: 5},
+				{FromPlanet: "Alpha", ToPlanet: "Beta", FuelCost: 10},
+				{FromPlanet: "Beta", ToPlanet: "Mars", FuelCost: 15},
+			}),
+			from:     "Earth",
+			to:       "Mars",
+			wantPath: []string{"Earth", "Alpha", "Beta", "Mars"},
+		},
+		{
+			name: "No Path Exists",
+			universe: *NewUniverse([]model.Transition{
+				{FromPlanet: "Earth", ToPlanet: "Alpha", FuelCost: 5},
+			}),
+			from:     "Earth",
+			to:       "Mars",
+			wantPath: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotPath := tt.universe.ShortestPath(tt.from, tt.to)
+			if !reflect.DeepEqual(gotPath, tt.wantPath) {
+				t.Errorf("ShortestPath() = %v, want %v", gotPath, tt.wantPath)
+			}
+		})
+	}
+}

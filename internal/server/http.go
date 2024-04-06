@@ -63,6 +63,7 @@ func (s *httpServer) postTravel(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+	w.WriteHeader(http.StatusOK)
 	_, err = io.WriteString(w, string(data))
 	if err != nil {
 		fmt.Printf("failed to serve post travel: %s", err)
@@ -70,7 +71,6 @@ func (s *httpServer) postTravel(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
 }
 
 func (s *httpServer) postCollect(w http.ResponseWriter, r *http.Request) {
@@ -106,6 +106,7 @@ func (s *httpServer) postCollect(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+	w.WriteHeader(http.StatusOK)
 	_, err = io.WriteString(w, string(data))
 	if err != nil {
 		fmt.Printf("failed to serve post collect: %s", err)
@@ -113,7 +114,6 @@ func (s *httpServer) postCollect(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
 }
 
 func (s *httpServer) deleteReset(w http.ResponseWriter, r *http.Request) {

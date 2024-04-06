@@ -3,6 +3,7 @@ package commander
 import (
 	"context"
 	"fmt"
+	"maps"
 	"space-go/internal/model"
 	"strings"
 	"time"
@@ -60,7 +61,26 @@ func Collect() CollectCommand {
 }
 
 func (cmd CollectCommand) Execute(ctx context.Context, commander *Commander) error {
-	// TODO: use collector from commander to optimally collect garbage
+	garbage := maps.Clone(commander.State.Garbage)
+	for name, val := range commander.State.Planet.Garbage {
+		garbage[name] = val
+	}
+	for name, val := range garbage {
+		garbage[name] = val.Normalize()
+	}
+	newGarbage := commander.Packer.Pack(commander.State.CapacityX, commander.State.CapacityY, garbage)
+	commander.State.Garbage = newGarbage
+	if len(newGarbage) != 0 {
+		response, err := commander.API.CollectGarbage(ctx, model.CollectRequest{Garbage: newGarbage})
+		if err != nil {
+			return err
+		}
+		planetGarbage := map[string]model.Garbage{}
+		for _, id := range response.Leaved {
+			planetGarbage[id] = garbage[id]
+		}
+		commander.State.Planet.Garbage = planetGarbage
+	}
 
 	return nil
 }
@@ -87,8 +107,11 @@ func (cmd GotoCommand) Execute(ctx context.Context, commander *Commander) error 
 	if len(path) == 0 {
 		return fmt.Errorf("no path from %s to %s", from, cmd.Destination)
 	}
+	if len(path) == 1 {
+		return nil
+	}
 
-	return Travel(path...).Execute(ctx, commander)
+	return Travel(path[1:]...).Execute(ctx, commander)
 }
 
 func (cmd GotoCommand) String() string {

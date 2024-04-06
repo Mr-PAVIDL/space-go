@@ -9,4 +9,6 @@ type State struct {
 	GarbageCellsCollected  int
 	GarbagePiecesCollected int
 	FuelUsed               int
+	CapacityX              int
+	CapacityY              int
 }

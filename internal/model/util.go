@@ -2,6 +2,14 @@ package model
 
 type Matrix [][]bool
 
+func EmptyMatrix(width, height int) Matrix {
+	mat := make(Matrix, height)
+	for i := 0; i < height; i++ {
+		mat[i] = make([]bool, width)
+	}
+	return mat
+}
+
 // func (g Garbage) Matrix() Matrix {
 //
 // }
@@ -9,6 +17,14 @@ func (g Garbage) Copy() Garbage {
 	g2 := make(Garbage, len(g))
 	for i := range g {
 		g2[i] = Cell{g[i][0], g[i][1]}
+	}
+	return g2
+}
+
+func (g Garbage) Add(x, y int) Garbage {
+	g2 := make(Garbage, len(g))
+	for i := 0; i < len(g2); i++ {
+		g2[i] = Cell{g[i][0] + x, g[i][1] + y}
 	}
 	return g2
 }

@@ -1,6 +1,8 @@
 package commander
 
-import "context"
+import (
+	"context"
+)
 
 type Strategy interface {
 	Next(ctx context.Context, state *State) Command

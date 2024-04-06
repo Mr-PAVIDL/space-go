@@ -56,12 +56,12 @@ func NewUniverse(transitions []model.Transition) *Universe {
 
 	for _, transition := range transitions {
 		universe.Planets[transition.ToPlanet] = model.Planet{
-			Garbage: map[string]model.Garbage{},
+			Garbage: nil,
 			Name:    transition.ToPlanet,
 		}
 
 		universe.Planets[transition.FromPlanet] = model.Planet{
-			Garbage: map[string]model.Garbage{},
+			Garbage: nil,
 			Name:    transition.FromPlanet,
 		}
 

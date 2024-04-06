@@ -12,6 +12,7 @@ type Commander struct {
 	Strategy Strategy
 	State    *State
 	Status   Status
+	Packer   Packer
 }
 
 func (commander *Commander) Run(ctx context.Context) error {
@@ -55,6 +56,7 @@ func (commander *Commander) init(ctx context.Context) error {
 	}
 
 	state.Universe = NewUniverse(universeResponse.Universe)
+	state.Universe.Planets[state.Planet.Name] = state.Planet
 
 	commander.State = state
 
