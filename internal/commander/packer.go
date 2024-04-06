@@ -5,6 +5,7 @@ import (
 	"log"
 	"sort"
 	"space-go/internal/model"
+	algorithmX "space-go/pack-test/Algorithm-X"
 	"strings"
 )
 
@@ -14,7 +15,76 @@ type Packer interface {
 
 type DumboPacker struct{}
 
+// Calculate the minimum and maximum x and y coordinates of garbage to determine its bounds.
+func calculateBounds(garbage model.Garbage) (minX, minY, maxX, maxY int) {
+	minX, minY = garbage[0][0], garbage[0][1]
+	maxX, maxY = minX, minY
+	for _, cell := range garbage {
+		if cell[0] < minX {
+			minX = cell[0]
+		}
+		if cell[0] > maxX {
+			maxX = cell[0]
+		}
+		if cell[1] < minY {
+			minY = cell[1]
+		}
+		if cell[1] > maxY {
+			maxY = cell[1]
+		}
+	}
+	return
+}
+
+//// Convert garbage to the Polyomino format expected by algorithmX.
+//func garbageToPolyomino(garbage model.Garbage) algorithmX.Polyomino {
+//	minX, minY, maxX, maxY := calculateBounds(garbage)
+//	width, height := maxX-minX+1, maxY-minY+1
+//	tiles := make([][]bool, height)
+//	for i := range tiles {
+//		tiles[i] = make([]bool, width)
+//	}
+//
+//	for _, cell := range garbage {
+//		x, y := cell[0]-minX, cell[1]-minY
+//		tiles[y][x] = true
+//	}
+//
+//	return algorithmX.Polyomino{Tiles: tiles}
+//}
+
+func garbageToPolyomino(g model.Garbage) algorithmX.Polyomino {
+	minX, minY, maxX, maxY := calculateBounds(g)
+	width, height := maxX-minX+1, maxY-minY+1
+	tiles := make([][]bool, height)
+	for i := range tiles {
+		tiles[i] = make([]bool, width)
+	}
+
+	for _, cell := range g {
+		x, y := cell[0]-minX, cell[1]-minY
+		tiles[y][x] = true
+	}
+
+	return algorithmX.Polyomino{Tiles: tiles, Name: ""} // Name will be assigned later.
+}
+
 func (p DumboPacker) Pack(width, height int, garbage map[string]model.Garbage) map[string]model.Garbage {
+	var polys []algorithmX.Polyomino
+
+	// Convert each garbage piece into a named Polyomino.
+	for name, g := range garbage {
+		poly := garbageToPolyomino(g)
+		poly.Name = name // Assign the garbage piece's name to the Polyomino.
+		polys = append(polys, poly)
+	}
+
+	packedGarbage := algorithmX.SolvePacking(polys, width, height)
+
+	return packedGarbage
+}
+
+func (p DumboPacker) PackOld(width, height int, garbage map[string]model.Garbage) map[string]model.Garbage {
 	type Pair struct {
 		Name string
 		G    model.Garbage
