@@ -2,11 +2,11 @@ package simple
 
 import (
 	"context"
+	"fmt"
 	"github.com/samber/lo"
 	"log"
 	"maps"
 	"math"
-	"os"
 	"space-go/internal/commander"
 	packer2 "space-go/internal/commander/packer"
 	"space-go/internal/commander/strategies"
@@ -54,17 +54,24 @@ func (strategy *Strategy) Next(ctx context.Context, state *commander.State) comm
 			// if garbage is an empty map, then the planet is emptied
 			if planet.Garbage == nil || len(planet.Garbage) > 0 {
 				if planet.Garbage != nil && commander.CountTiles(planet.Garbage) < minTiles {
-					continue
+					packing := packer2.DuploPacker{}.Pack(state.CapacityX, state.CapacityY, model.PileGarbage(planet.Garbage, state.Garbage), true, 0)
+					if len(packing) < len(planet.Garbage)+len(state.Garbage) {
+						continue
+					}
 				}
 				candidates = append(candidates, planet.Name)
 			}
 		}
 
+		var nearest string
 		if len(candidates) == 0 {
-			os.Exit(0)
+			fmt.Println("No nearest planet found, peeking at random")
+			nearest = lo.Sample(lo.MapToSlice(state.Universe.Planets, func(n string, _ model.Planet) string {
+				return n
+			}))
+		} else {
+			nearest = lo.Sample(candidates) //state.Universe.Nearest(state.Planet.Name, candidates)
 		}
-
-		nearest := lo.Sample(candidates) //state.Universe.Nearest(state.Planet.Name, candidates)
 
 		return commander.Sequential(
 			commander.GoTo(nearest),

@@ -27,6 +27,9 @@ func (commander *Commander) Run(ctx context.Context) error {
 	commander.Status = Running
 	for commander.Status == Running {
 		cmd := commander.Strategy.Next(ctx, commander.State)
+		if cmd == nil {
+			return nil
+		}
 		if err := commander.Execute(ctx, cmd); err != nil {
 			slog.Error("failed to execute a command", slog.String("error", err.Error()))
 			maxErrors--

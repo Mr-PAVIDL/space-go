@@ -26,6 +26,7 @@ func main() {
 		Status:   commander.Running,
 		Packer:   packer.DuploPacker{},
 	}
+
 	err := cmd.Run(ctx)
 	if err != nil {
 		panic(err)

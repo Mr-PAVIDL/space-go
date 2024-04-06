@@ -15,10 +15,12 @@ import (
 const PathCostIncrement = 10
 
 type Server struct {
-	graph      map[string]map[string]int
-	planets    map[string]model.Planet
-	ship       model.Ship
-	allGarbage map[string]model.Garbage
+	graph          map[string]map[string]int
+	planets        map[string]model.Planet
+	ship           model.Ship
+	allGarbage     map[string]model.Garbage
+	totalFuel      int
+	totalDeposited int
 }
 
 func FromDump(planetsPath, graphPath string) Server {

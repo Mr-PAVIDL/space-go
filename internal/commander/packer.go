@@ -3,7 +3,6 @@ package commander
 import (
 	"github.com/samber/lo"
 	"log"
-	"maps"
 	"math/rand"
 	"sort"
 	"space-go/internal/model"
@@ -63,36 +62,36 @@ func pack(width, height int, pairs []pair, scouting bool, minTiles int) map[stri
 	return added
 }
 
-func (p DumboPacker) PackOld(width, height int, garbage map[string]model.Garbage) map[string]model.Garbage {
-	type Pair struct {
-		Name string
-		G    model.Garbage
-	}
-	pairs := lo.MapToSlice(garbage, func(key string, val model.Garbage) Pair {
-		return Pair{Name: key, G: val}
-	})
-	sort.Slice(pairs, func(i, j int) bool {
-		return len(pairs[i].G) < len(pairs[j].G)
-	})
-	mat := model.EmptyMatrix(width, height)
-	added := map[string]model.Garbage{}
-	for _, p := range pairs {
-		if ok, g := tryFit(width, height, mat, p.G); ok {
-			added[p.Name] = g // save garbage with offset
-		}
-	}
-
-	if len(garbage) > 0 {
-		print(added, width, height)
-	}
-
-	garb := maps.Clone(garbage)
-	packState := NewPackingState(width, height, garb)
-	res := packState.Pack()
-	print(res, width, height)
-
-	return added
-}
+//func (p DumboPacker) PackOld(width, height int, garbage map[string]model.Garbage) map[string]model.Garbage {
+//	type Pair struct {
+//		Name string
+//		G    model.Garbage
+//	}
+//	pairs := lo.MapToSlice(garbage, func(key string, val model.Garbage) Pair {
+//		return Pair{Name: key, G: val}
+//	})
+//	sort.Slice(pairs, func(i, j int) bool {
+//		return len(pairs[i].G) < len(pairs[j].G)
+//	})
+//	mat := model.EmptyMatrix(width, height)
+//	added := map[string]model.Garbage{}
+//	for _, p := range pairs {
+//		if ok, g := tryFit(width, height, mat, p.G); ok {
+//			added[p.Name] = g // save garbage with offset
+//		}
+//	}
+//
+//	if len(garbage) > 0 {
+//		print(added, width, height)
+//	}
+//
+//	garb := maps.Clone(garbage)
+//	packState := NewPackingState(width, height, garb)
+//	res := packState.Pack()
+//	print(res, width, height)
+//
+//	return added
+//}
 
 func CountTiles(garbage map[string]model.Garbage) int {
 	s := 0
