@@ -189,7 +189,7 @@ func main() {
 
 		fmt.Println("Starting")
 		t1 := time.Now()
-		data := packer.BoostedRawPack(ps, time.Second, 10_000, w, h)
+		data := packer.BoostedRawPack(ps, time.Millisecond*200, 10_000, w, h)
 		fmt.Println("Elapsed:", time.Since(t1))
 
 		fmt.Println("[")

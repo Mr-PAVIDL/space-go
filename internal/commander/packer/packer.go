@@ -107,8 +107,13 @@ func (p DuploPacker) Pack(w, h int, piecesOfGarbage map[string]model.Garbage, sc
 }
 
 func BoostedRawPack(polyominos []*Polyomino, timeout time.Duration, countLimit int, w, h int) model.Matrix {
-	now := time.Now()
-	limit := now.Add(timeout)
+	var now time.Time
+	var limit time.Time
+
+	if timeout > 0 {
+		now = time.Now()
+		limit = now.Add(timeout)
+	}
 
 	var optimal model.Matrix
 	var stat GridStat
@@ -127,8 +132,10 @@ func BoostedRawPack(polyominos []*Polyomino, timeout time.Duration, countLimit i
 			optimal = result
 		}
 
-		if time.Now().After(limit) {
-			return optimal
+		if timeout > 0 {
+			if time.Now().After(limit) {
+				return optimal
+			}
 		}
 	}
 
@@ -141,8 +148,10 @@ func BoostedRawPack(polyominos []*Polyomino, timeout time.Duration, countLimit i
 			optimal = result
 		}
 
-		if time.Now().After(limit) {
-			return optimal
+		if timeout > 0 {
+			if time.Now().After(limit) {
+				return optimal
+			}
 		}
 	}
 
@@ -150,6 +159,9 @@ func BoostedRawPack(polyominos []*Polyomino, timeout time.Duration, countLimit i
 }
 
 func isStatBetter(stat1, stat2 GridStat) bool {
+	if float64(stat1.TotalGarbageCells)/float64(stat1.TotalCells) > float64(stat2.TotalGarbageCells)/float64(stat2.TotalCells) {
+		return true
+	}
 	if stat1.AverageCost > stat2.AverageCost {
 		return true
 	}
